@@ -1,0 +1,18 @@
+{% extends "base_generic.html" %}
+{% block title %}Inventory | Shelfwise{% endblock %}
+{% block eyebrow %}Collection operations{% endblock %}
+{% block page_title %}Physical inventory{% endblock %}
+{% block page_subtitle %}Manage every copy, shelf position, condition, and circulation state.{% endblock %}
+{% block content %}
+<section class="data-panel">
+  <div class="section-heading"><div><h2>Registered copies</h2><p>{{ copies|length }} physical item{{ copies|length|pluralize }}</p></div><div class="d-flex gap-2"><a class="button secondary" href="{% url 'qr-labels' %}">Print QR labels</a><a class="button" href="{% url 'copy-create' %}">Add copy</a></div></div>
+  <div class="table-responsive"><table class="table align-middle js-data-table" data-actions-column="true"><thead><tr><th>Accession</th><th>Book</th><th>Location</th><th>Imprint</th><th>Status</th><th>Borrower / due</th><th>Actions</th></tr></thead><tbody>
+  {% for copy in copies %}<tr>
+    <td><a href="{% url 'copy-detail' copy.pk %}"><strong>{{ copy.accession_number|default:'Not assigned' }}</strong><small class="d-block text-muted">{{ copy.pk|stringformat:'s'|slice:':8' }}</small></a></td>
+    <td>{{ copy.book.title }}<small class="d-block text-muted">{{ copy.book.author }}</small></td><td>{{ copy.shelf_location|default:'—' }}</td><td>{{ copy.imprint }}</td>
+    <td><span class="badge {% if copy.status == 'a' %}available{% elif copy.status == 'o' %}loan{% elif copy.status == 'l' %}maintenance{% else %}reserved{% endif %}">{{ copy.get_status_display }}</span></td>
+    <td>{% if copy.borrower %}{{ copy.borrower.username }}{% if copy.due_back %}<small class="d-block {% if copy.is_overdue %}text-danger{% else %}text-muted{% endif %}">Due {{ copy.due_back|date:'d M Y' }}</small>{% endif %}{% else %}—{% endif %}</td>
+    <td><div class="table-actions">{% if copy.status == 'a' %}<a class="issue-row-action" href="{% url 'copy-detail' copy.pk %}#issue-book">Issue book</a>{% else %}<a href="{% url 'copy-detail' copy.pk %}">View</a>{% endif %}<a href="{% url 'copy-update' copy.pk %}">Edit</a>{% if copy.status != 'o' %}<a class="danger-link" href="{% url 'copy-delete' copy.pk %}">Delete</a>{% endif %}</div></td>
+  </tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

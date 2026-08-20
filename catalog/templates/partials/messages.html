@@ -1,0 +1,11 @@
+{% if messages %}
+  <div class="messages toast-stack" role="status" aria-live="polite">
+    {% for message in messages %}
+      <div class="alert {% if 'error' in message.tags %}error{% else %}success{% endif %}">
+        <span class="alert-status" aria-hidden="true">{% if 'error' in message.tags %}!{% else %}&check;{% endif %}</span>
+        <span>{{ message }}</span>
+        <button class="alert-dismiss" type="button" aria-label="Dismiss notification">&times;</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

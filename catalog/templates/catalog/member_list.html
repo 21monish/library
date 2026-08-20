@@ -1,0 +1,52 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Users & Access | Shelfwise{% endblock %}
+{% block eyebrow %}Access control{% endblock %}
+{% block page_title %}Users and permissions{% endblock %}
+{% block page_subtitle %}Manage accounts, roles, CRUD permissions, and circulation status.{% endblock %}
+
+{% block content %}
+  <section class="role-matrix" aria-label="Role permissions">
+    <article><span class="role-icon student">S</span><div><h3>Student</h3><p>Catalog, reservations, 15-day loans, penalties, and their own account.</p></div></article>
+    <article><span class="role-icon teacher">T</span><div><h3>Teacher</h3><p>Catalog, reservations, 30-day loans, penalties, and their own account.</p></div></article>
+    <article><span class="role-icon library">L</span><div><h3>Library</h3><p>Library workflows limited by the selected CRUD permissions.</p></div></article>
+    <article><span class="role-icon superadmin">A</span><div><h3>Superadmin</h3><p>Full access to every workflow, role, and permission.</p></div></article>
+  </section>
+
+  <section class="data-panel member-access-panel">
+    <div class="section-heading">
+      <div><h2>User directory</h2><p>{{ members|length }} account{{ members|length|pluralize }} visible to your role</p></div>
+      {% if crud_permissions.add %}<a class="button member-add-button" href="{% url 'member-create' %}"><span aria-hidden="true">+</span> Add user</a>{% endif %}
+    </div>
+
+    <div class="member-action-help">
+      <strong>Account actions</strong>
+      <span>Use Edit to change a role or its View, Add, Change, and Delete permissions. Your own superadmin account is protected from deletion.</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle js-data-table member-access-table" data-actions-column="true">
+        <thead><tr><th>User</th><th>Role</th><th>CRUD access</th><th>Status</th><th>Active loans</th><th>Unpaid</th><th class="all member-actions-column" data-priority="1">Actions</th></tr></thead>
+        <tbody>
+          {% for member in members %}
+            <tr>
+              <td><a class="member-cell" href="{% url 'member-detail' member.pk %}">{% if member.profile.photo_url %}<img src="{{ member.profile.photo_url }}" alt="">{% else %}<span>{{ member.username|first }}</span>{% endif %}<span><strong>{{ member.get_full_name|default:member.username }}</strong><small>{{ member.username }}{% if member.email %} &middot; {{ member.email }}{% endif %}</small></span></a></td>
+              <td><span class="tag">{{ member.profile.get_role_display }}</span></td>
+              <td><div class="permission-pills" aria-label="View Add Change Delete"><span class="{% if member.profile.can_view or member.is_superuser %}on{% endif %}" title="View">V</span><span class="{% if member.profile.can_add or member.is_superuser %}on{% endif %}" title="Add">A</span><span class="{% if member.profile.can_change or member.is_superuser %}on{% endif %}" title="Change">C</span><span class="{% if member.profile.can_delete or member.is_superuser %}on{% endif %}" title="Delete">D</span></div></td>
+              <td><span class="badge {% if member.is_active %}available{% else %}maintenance{% endif %}">{% if member.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+              <td>{{ member.active_loan_count }}</td>
+              <td>INR {{ member.unpaid_penalty_total|default:0 }}</td>
+              <td class="all member-actions-column">
+                <div class="table-actions member-row-actions">
+                  <a class="member-action-view" href="{% url 'member-detail' member.pk %}">View</a>
+                  {% if crud_permissions.change %}<a class="member-action-edit" href="{% url 'member-update' member.pk %}">Edit</a>{% endif %}
+                  {% if crud_permissions.delete and not member.is_superuser and member != user %}<a class="danger-link member-action-delete" href="{% url 'member-delete' member.pk %}">Delete</a>{% elif crud_permissions.delete %}<span class="member-action-disabled" title="The active superadmin account cannot delete itself." aria-disabled="true">Delete</span>{% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

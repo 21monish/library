@@ -1,0 +1,18 @@
+{% extends "base_generic.html" %}
+{% block title %}{{ mode }} book | Shelfwise{% endblock %}
+{% block eyebrow %}Catalog management{% endblock %}
+{% block page_title %}{{ mode }} book{% endblock %}
+{% block page_subtitle %}{% if book %}Update {{ book.title }} and save your changes.{% else %}Create a new bibliographic catalog record.{% endif %}{% endblock %}
+{% block content %}
+<div class="crud-layout">
+  <form class="panel crud-form" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="crud-fields">
+      {% for field in form %}<div class="field {% if field.name == 'summary' or field.name == 'genre' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>{% endfor %}
+    </div>
+    <div class="crud-actions"><button class="button" type="submit">{% if book %}Save changes{% else %}Add book{% endif %}</button><a class="button secondary" href="{% if book %}{{ book.get_absolute_url }}{% else %}{% url 'books' %}{% endif %}">Cancel</a></div>
+  </form>
+  <aside class="panel crud-help"><h3>Catalog guidance</h3><p>ISBN must be unique. Select all relevant genres and optionally upload a cover.</p>{% if book.cover_url %}<img src="{{ book.cover_url }}" alt="Current cover of {{ book.title }}">{% endif %}{% if not book %}<a class="button secondary full" href="{% url 'book-import-isbn' %}">Import by ISBN instead</a>{% endif %}{% if book %}<a class="button danger full" href="{% url 'book-delete' book.pk %}">Delete this book</a>{% endif %}</aside>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base_generic.html" %}
+
+{% block title %}{% if is_library_admin %}Penalties{% else %}My Penalties{% endif %} | Shelfwise{% endblock %}
+{% block eyebrow %}Accounts{% endblock %}
+{% block page_title %}{% if is_library_admin %}Penalty management{% else %}My penalties{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_library_admin %}Track and resolve overdue charges across all members.{% else %}Review charges assessed on returned overdue books.{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="panel penalty-summary">
+    <div>
+      <span class="meta-label">Outstanding balance</span>
+      <strong>₹{{ outstanding_total }}</strong>
+      <p>{% if is_library_admin %}Total unpaid penalties across the library.{% else %}Your unpaid returned-book penalties.{% endif %}</p>
+    </div>
+    <div class="penalty-filters" aria-label="Filter penalties">
+      <a class="button small {% if not status_filter %}active-filter{% else %}secondary{% endif %}" href="{% url 'penalties' %}">All</a>
+      <a class="button small {% if status_filter == 'unpaid' %}active-filter{% else %}secondary{% endif %}" href="?status=unpaid">Unpaid</a>
+      <a class="button small {% if status_filter == 'paid' %}active-filter{% else %}secondary{% endif %}" href="?status=paid">Paid</a>
+      <a class="button small {% if status_filter == 'waived' %}active-filter{% else %}secondary{% endif %}" href="?status=waived">Waived</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-heading">
+      <div><h2>Penalty history</h2><p>{{ penalty_list|length }} record{{ penalty_list|length|pluralize }} found.</p></div>
+    </div>
+    {% if penalty_list %}
+      <div class="panel data-panel">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle library-table js-data-table" data-order-column="{% if is_library_admin %}4{% else %}3{% endif %}" data-order-direction="desc" data-actions-column="true">
+            <thead><tr><th>Book</th>{% if is_library_admin %}<th>Member</th>{% endif %}<th>Overdue</th><th>Amount</th><th>Assessed</th><th>Status</th><th>{% if is_library_admin %}Action{% else %}Receipt{% endif %}</th></tr></thead>
+            <tbody>
+              {% for penalty in penalty_list %}
+                <tr>
+                  <td><strong>{{ penalty.book_title }}</strong>{% if penalty.notes %}<div class="loan-meta">{{ penalty.notes }}</div>{% endif %}</td>
+                  {% if is_library_admin %}<td><strong>{{ penalty.borrower.username }}</strong></td>{% endif %}
+                  <td data-order="{{ penalty.days_overdue }}">{{ penalty.days_overdue }} day{{ penalty.days_overdue|pluralize }}</td>
+                  <td data-order="{{ penalty.amount }}"><strong class="penalty-amount">₹{{ penalty.amount }}</strong></td>
+                  <td data-order="{{ penalty.assessed_at|date:'Y-m-d H:i:s' }}">{{ penalty.assessed_at|date:"d M Y" }}</td>
+                  <td><span class="badge {% if penalty.status == 'unpaid' %}maintenance{% elif penalty.status == 'paid' %}available{% else %}reserved{% endif %}">{{ penalty.get_status_display }}</span></td>
+                  <td>
+                    {% if is_library_admin %}
+                      {% if penalty.status == 'unpaid' and crud_permissions.change %}
+                        <div class="d-flex gap-2 flex-wrap">
+                          <form method="post" action="{% url 'resolve-penalty' penalty.pk 'paid' %}" data-confirm="Confirm payment of ₹{{ penalty.amount }} from {{ penalty.borrower.username|escape }}?">{% csrf_token %}<button class="button small" type="submit">Mark paid</button></form>
+                          <form method="post" action="{% url 'resolve-penalty' penalty.pk 'waived' %}" data-confirm="Waive the ₹{{ penalty.amount }} penalty for {{ penalty.borrower.username|escape }}?">{% csrf_token %}<button class="button small secondary" type="submit">Waive</button></form>
+                        </div>
+                      {% elif penalty.status != 'unpaid' %}<a class="button small secondary" href="{% url 'penalty-receipt' penalty.pk %}">Receipt</a>{% else %}<span class="desk-note">Change access required</span>{% endif %}
+                    {% elif penalty.status != 'unpaid' %}<a class="button small secondary" href="{% url 'penalty-receipt' penalty.pk %}">View receipt</a>{% else %}<span class="due">Available after payment</span>{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span>
+        <h3>No penalties found</h3><p>There are no penalty records matching this filter.</p>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

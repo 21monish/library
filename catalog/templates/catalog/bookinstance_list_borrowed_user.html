@@ -1,0 +1,38 @@
+{% extends "base_generic.html" %}
+
+{% block title %}My Loans | Shelfwise{% endblock %}
+{% block eyebrow %}My account{% endblock %}
+{% block page_title %}My borrowed books{% endblock %}
+{% block page_subtitle %}Track due dates and overdue fines for your active loans.{% endblock %}
+
+{% block content %}
+  <div class="section-heading">
+    <div><h2>Active loans</h2><p>{{ bookinstance_list|length }} book{{ bookinstance_list|length|pluralize }} currently checked out.</p></div>
+    <div class="top-actions"><a class="button secondary" href="{% url 'loan-history' %}">Loan history</a><a class="button" href="{% url 'books' %}">Browse more books</a></div>
+  </div>
+  {% if bookinstance_list %}
+    <div class="panel data-panel">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle library-table js-data-table" data-order-column="2" data-order-direction="asc">
+          <thead><tr><th>Book</th><th>Copy details</th><th>Due date</th><th>Fine / status</th></tr></thead>
+          <tbody>
+            {% for bookinst in bookinstance_list %}
+              <tr>
+                <td><a class="record-link" href="{{ bookinst.book.get_absolute_url }}">{{ bookinst.book.title }}</a></td>
+                <td><strong>{{ bookinst.imprint }}</strong><div class="loan-meta">{{ bookinst.id }}</div></td>
+                <td data-order="{{ bookinst.due_back|date:'Y-m-d' }}"><span class="due {% if bookinst.is_overdue %}overdue{% endif %}">{% if bookinst.is_overdue %}Overdue since{% else %}Due{% endif %} {{ bookinst.due_back|date:"d M Y" }}</span></td>
+                <td data-order="{{ bookinst.fine_amount }}">{% if bookinst.fine_amount %}<span class="badge maintenance">Fine ₹{{ bookinst.fine_amount }}</span>{% else %}<span class="badge loan">On loan</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></span>
+      <h3>Your shelf is clear</h3><p>You have no active loans. Explore the catalog to find your next read.</p>
+      <a class="button" href="{% url 'books' %}">Explore books</a>
+    </div>
+  {% endif %}
+{% endblock %}

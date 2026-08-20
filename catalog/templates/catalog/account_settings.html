@@ -1,0 +1,37 @@
+{% extends "base_generic.html" %}
+
+{% block title %}My Account | Shelfwise{% endblock %}
+{% block eyebrow %}Personal settings{% endblock %}
+{% block page_title %}My account{% endblock %}
+{% block page_subtitle %}Keep your contact details current and manage secure access.{% endblock %}
+
+{% block content %}
+  <section class="member-profile panel account-profile-header">
+    <div class="member-profile-main">
+      {% if user.profile.photo_url %}<img src="{{ user.profile.photo_url }}" alt="{% firstof user.get_full_name user.username %} profile photo">{% else %}<span class="member-profile-placeholder">{{ user.username|first }}</span>{% endif %}
+      <div><span class="badge available">Active account</span><h2>{% firstof user.get_full_name user.username %}</h2><p>@{{ user.username }} · {{ user.profile.get_role_display }}</p></div>
+    </div>
+    {% if current_role == 'student' or current_role == 'teacher' %}<a class="button secondary" href="{% url 'library-card' %}">Show library card</a>{% endif %}
+  </section>
+
+  <div class="crud-layout section">
+    <form class="panel crud-form" method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="crud-fields">
+        {% for field in form %}<div class="field {% if field.name == 'photo_upload' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>{% endfor %}
+      </div>
+      <div class="crud-actions"><button class="button" type="submit">Save account details</button><a class="button secondary" href="{% url 'index' %}">Cancel</a></div>
+    </form>
+
+    <aside class="panel crud-help account-security-panel">
+      <span class="meta-label">Account security</span><h3>Password and access</h3><p>Use a unique password and keep your email current so you can recover access securely.</p>
+      <a class="button full" href="{% url 'password_change' %}">Change my password</a>
+      <dl class="account-facts">
+        <div><dt>Unread alerts</dt><dd>{{ unread_count }}</dd></div><div><dt>Active loans</dt><dd>{{ active_loan_count }}</dd></div>
+        {% if account_loan_days %}<div><dt>Loan period</dt><dd>{{ account_loan_days }} days</dd></div><div><dt>Book limit</dt><dd>{{ account_loan_limit }}</dd></div>{% endif %}
+      </dl>
+      <p class="account-note">Your username and role are managed by the library to protect circulation records.</p>
+    </aside>
+  </div>
+{% endblock %}

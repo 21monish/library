@@ -1,0 +1,63 @@
+{% extends "base_generic.html" %}
+
+{% block title %}QR Circulation | Shelfwise{% endblock %}
+{% block eyebrow %}Circulation scanner{% endblock %}
+{% block page_title %}Issue and return by QR{% endblock %}
+{% block page_subtitle %}Scan a copy label and member card, or enter their codes manually.{% endblock %}
+
+{% block content %}
+  <div class="scanner-grid">
+    <section class="panel panel-body">
+      <div class="section-heading"><div><h2>Camera scanner</h2><p>Choose where the next scan should be placed.</p></div></div>
+      <div class="btn-group w-100 mb-3" role="group" aria-label="Scan target">
+        <input class="btn-check" type="radio" name="scan_target" id="target-copy" value="copy_code" checked>
+        <label class="btn btn-outline-primary" for="target-copy">Copy label</label>
+        <input class="btn-check" type="radio" name="scan_target" id="target-member" value="member_code">
+        <label class="btn btn-outline-primary" for="target-member">Member card</label>
+      </div>
+      <div id="qr-reader"></div>
+      <div id="scan-feedback" class="alert success mt-3 d-none" role="status"></div>
+    </section>
+
+    <section class="panel panel-body">
+      <div class="section-heading"><div><h2>Circulation action</h2><p>Review scanned values before confirming.</p></div><a class="button secondary small" href="{% url 'qr-labels' %}">Print labels</a></div>
+      <form method="post" action="{% url 'process-scan' %}" id="scan-form">
+        {% csrf_token %}
+        <div class="field"><label for="copy-code">Copy QR code or UUID</label><input class="input" id="copy-code" name="copy_code" required placeholder="SHELFWISE:COPY:…"></div>
+        <div class="field"><label for="member-code">Member QR code or username</label><input class="input" id="member-code" name="member_code" placeholder="SHELFWISE:MEMBER:…"></div>
+        <div class="field"><label>Action</label><div class="d-grid gap-2 d-sm-flex">
+          <button class="button flex-fill" type="submit" name="action" value="issue">Issue copy</button>
+          <button class="button secondary flex-fill" type="submit" name="action" value="return" formnovalidate>Return copy</button>
+        </div></div>
+      </form>
+      <div class="scanner-help"><strong>Workflow</strong><ol><li>Scan the copy label.</li><li>For issuing, scan the member card.</li><li>Select Issue or Return.</li></ol></div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof Html5QrcodeScanner === 'undefined') return;
+      let lastValue = '';
+      let lastTime = 0;
+      const scanner = new Html5QrcodeScanner('qr-reader', {
+        fps: 10,
+        qrbox: { width: 240, height: 240 },
+        rememberLastUsedCamera: true,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE],
+      }, false);
+      scanner.render((decodedText) => {
+        const now = Date.now();
+        if (decodedText === lastValue && now - lastTime < 2000) return;
+        lastValue = decodedText;
+        lastTime = now;
+        const target = document.querySelector('input[name="scan_target"]:checked').value;
+        const field = document.querySelector(target === 'copy_code' ? '#copy-code' : '#member-code');
+        field.value = decodedText;
+        const feedback = document.querySelector('#scan-feedback');
+        feedback.textContent = `${target === 'copy_code' ? 'Copy' : 'Member'} code captured.`;
+        feedback.classList.remove('d-none');
+      }, () => {});
+    });
+  </script>
+{% endblock %}

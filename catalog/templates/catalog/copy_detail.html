@@ -1,0 +1,35 @@
+{% extends "base_generic.html" %}
+{% block title %}{{ copy.book.title }} copy | Shelfwise{% endblock %}
+{% block eyebrow %}Inventory record{% endblock %}
+{% block page_title %}{{ copy.book.title }}{% endblock %}
+{% block page_subtitle %}Accession {{ copy.accession_number|default:'not assigned' }} · {{ copy.get_status_display }}{% endblock %}
+{% block content %}
+<div class="policy-strip">
+  <div><strong>Student loan</strong><span>{{ loan_policy.student }} days</span></div>
+  <div><strong>Teacher loan</strong><span>{{ loan_policy.teacher }} days</span></div>
+  <div><strong>Overdue penalty</strong><span>₹{{ penalty_per_day }} per day</span></div>
+</div>
+<div class="detail-grid section">
+  <section class="panel detail-main">
+    <div class="section-heading"><div><h2>Copy information</h2><p>{{ copy.book.author }}</p></div><span class="badge {% if copy.status == 'a' %}available{% elif copy.status == 'o' %}loan{% else %}maintenance{% endif %}">{{ copy.get_status_display }}</span></div>
+    <div class="metadata"><div><span class="meta-label">Accession number</span><span class="meta-value">{{ copy.accession_number|default:'—' }}</span></div><div><span class="meta-label">Shelf</span><span class="meta-value">{{ copy.shelf_location|default:'—' }}</span></div><div><span class="meta-label">Imprint</span><span class="meta-value">{{ copy.imprint }}</span></div><div><span class="meta-label">Copy ID</span><span class="meta-value copy-id-value">{{ copy.pk }}</span></div></div>
+    {% if copy.condition_notes %}<div class="scanner-help"><strong>Condition notes</strong><p>{{ copy.condition_notes }}</p></div>{% endif %}
+    <div class="crud-actions"><a class="button secondary" href="{% url 'book-detail' copy.book.pk %}">Back to book</a><a class="button secondary" href="{% url 'copy-update' copy.pk %}">Edit inventory record</a><a class="button secondary" href="{% url 'copy-qr' copy.pk %}">Download QR</a>{% if copy.status != 'o' %}<a class="button danger" href="{% url 'copy-delete' copy.pk %}">Delete</a>{% endif %}</div>
+  </section>
+  <aside class="panel detail-aside issue-panel" id="issue-book">
+    <img class="copy-qr-preview" src="{% url 'copy-qr' copy.pk %}" alt="Copy QR code">
+    <span class="issue-panel-kicker">Library in-charge action</span>
+    <h3>{% if copy.status == 'a' %}Issue this book{% else %}Library desk circulation{% endif %}</h3>
+    {% if copy.status == 'a' %}
+      <p>Select the student or teacher receiving this copy.</p>
+      <form method="post" action="{% url 'copy-issue' copy.pk %}">{% csrf_token %}<div class="field"><label for="{{ issue_form.borrower.id_for_label }}">Student or teacher</label>{{ issue_form.borrower }}<small>Student: {{ loan_policy.student }} days · Teacher: {{ loan_policy.teacher }} days</small></div><button class="button full issue-confirm-button" type="submit">Confirm and issue book</button></form>
+    {% elif copy.status == 'o' %}
+      <p>Borrowed by <strong>{{ copy.borrower.username }}</strong>, due {{ copy.due_back|date:'d M Y' }}.</p><form method="post" action="{% url 'copy-checkin' copy.pk %}" data-confirm="Return this copy from {{ copy.borrower.username|escape }}? Any overdue penalty will be recorded automatically.">{% csrf_token %}<button class="button full" type="submit">Return copy</button></form>
+    {% else %}<p>Change status to Available before issuing this copy.</p>{% endif %}
+  </aside>
+</div>
+<div class="report-grid section">
+  <section class="data-panel"><div class="section-heading"><div><h2>Loan history</h2></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Member</th><th>Issued</th><th>Due</th><th>Status</th></tr></thead><tbody>{% for loan in loans %}<tr><td>{{ loan.borrower.username }}</td><td>{{ loan.issued_at|date:'d M Y' }}</td><td>{{ loan.due_date|date:'d M Y' }}</td><td>{{ loan.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4">No circulation history.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="data-panel"><div class="section-heading"><div><h2>Audit trail</h2></div></div><div class="table-responsive"><table class="table"><thead><tr><th>When</th><th>Action</th><th>Operator</th></tr></thead><tbody>{% for audit in audits %}<tr><td>{{ audit.created_at|date:'d M Y H:i' }}</td><td>{{ audit.get_action_display }}</td><td>{{ audit.actor|default:'System' }}</td></tr>{% empty %}<tr><td colspan="3">No audited actions.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}

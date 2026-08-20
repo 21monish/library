@@ -1,0 +1,27 @@
+{% extends "base_generic.html" %}
+{% block title %}{{ mode }} user | Shelfwise{% endblock %}
+{% block eyebrow %}Access control{% endblock %}
+{% block page_title %}{{ mode }} user{% endblock %}
+{% block page_subtitle %}{% if member %}Update account, role, and permissions.{% else %}Create a secure account and assign its access level.{% endif %}{% endblock %}
+{% block content %}
+<div class="crud-layout">
+  <form class="panel crud-form" method="post" enctype="multipart/form-data" data-permission-form data-original-role="{{ form.role.value|default:'student' }}" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="crud-fields">
+      {% for field in form %}{% if field.name != 'can_view' and field.name != 'can_add' and field.name != 'can_change' and field.name != 'can_delete' and field.name != 'permissions_configured' %}<div class="field {% if field.name == 'photo_upload' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required">*</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}</div>{% endif %}{% endfor %}
+    </div>
+    {% if form.can_view %}
+      {{ form.permissions_configured }}
+      <fieldset class="permission-editor">
+        <legend>CRUD permissions</legend>
+        <p>The role is the security ceiling. Checkboxes can restrict staff access but cannot turn a student or teacher into library staff.</p>
+        <div class="permission-checkbox-grid">
+          {% for field in form %}{% if field.name == 'can_view' or field.name == 'can_add' or field.name == 'can_change' or field.name == 'can_delete' %}<label class="permission-checkbox" for="{{ field.id_for_label }}">{{ field }}<span><strong>{{ field.label }}</strong><small>{{ field.help_text }}</small></span></label>{% endif %}{% endfor %}
+        </div>
+      </fieldset>
+    {% endif %}
+    <div class="crud-actions"><button class="button" type="submit">{% if member %}Save access changes{% else %}Create user{% endif %}</button><a class="button secondary" href="{% if member %}{% url 'member-detail' member.pk %}{% else %}{% url 'members' %}{% endif %}">Cancel</a></div>
+  </form>
+  <aside class="panel crud-help">{% if member.profile.photo_url %}<img class="member-profile-photo" src="{{ member.profile.photo_url }}" alt="{{ member.username }}">{% endif %}<h3>Role security</h3><p>Students and teachers always remain borrowers. Library accounts can be limited to View, Add, Change, or Delete. Superadmin always retains full access.</p><h3>Passwords</h3><p>Leave the password blank while editing unless you intend to reset it. Deactivate accounts when history must be retained.</p>{% if member and not member.is_superuser and member != user and crud_permissions.delete %}<a class="button danger full" href="{% url 'member-delete' member.pk %}">Delete user</a>{% endif %}</aside>
+</div>
+{% endblock %}

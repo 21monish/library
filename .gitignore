@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+
+# Environments
+.env
+.env.*
+!.env.example
+.venv/
+env/
+venv/
+ENV/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Generated deployment artifacts
+staticfiles/
+reports/
+media/
+backups/
+.runtime/
+tmp*/
+.test-*/
+.runserver.out
+.runserver.err
+.requirements.sha256

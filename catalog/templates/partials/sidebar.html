@@ -1,0 +1,60 @@
+<aside class="sidebar workspace-nav" id="sidebar" aria-label="Workspace navigation">
+  <div class="sidebar-heading">
+    <span class="sidebar-heading-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg></span>
+    <div><strong>Workspace</strong><small>{% if is_library_admin %}Library operations{% elif user.is_authenticated %}Member services{% else %}Public library{% endif %}</small></div>
+  </div>
+
+  <div class="nav-label">Overview</div>
+  <nav class="nav-list" aria-label="Primary navigation">
+    <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a class="nav-link {% if request.resolver_match.url_name == 'books' or request.resolver_match.url_name == 'book-detail' %}active{% endif %}" href="{% url 'books' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+      <span>Book catalog</span>
+    </a>
+    {% if user.is_authenticated %}
+      <a class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'notifications' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span>Notifications</span>{% if unread_notification_count %}<span class="nav-count">{{ unread_notification_count }}</span>{% endif %}
+      </a>
+    {% endif %}
+  </nav>
+
+  {% if current_role == 'student' or current_role == 'teacher' %}
+    <div class="nav-label">My library</div>
+    <nav class="nav-list utility-nav" aria-label="Member navigation">
+      <a class="nav-link {% if request.resolver_match.url_name == 'my-borrowed' or request.resolver_match.url_name == 'loan-history' %}active{% endif %}" href="{% url 'my-borrowed' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg><span>My borrowed books</span></a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'reservations' %}active{% endif %}" href="{% url 'reservations' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12a2 2 0 0 1 2 2v16l-8-4-8 4V5a2 2 0 0 1 2-2Z"/></svg><span>Reservations</span></a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'penalties' %}active{% endif %}" href="{% url 'penalties' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h2"/></svg><span>Penalties</span></a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'library-card' %}active{% endif %}" href="{% url 'library-card' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M5.5 16c.8-2 4.2-2 5 0M14 9h4M14 13h4"/></svg><span>My library card</span></a>
+    </nav>
+  {% elif is_library_admin %}
+    <div class="nav-label">Library operations</div>
+    <nav class="nav-list utility-nav staff-navigation" aria-label="Staff navigation">
+      <div class="app-nav-group {% if request.resolver_match.url_name == 'all-borrowed' or request.resolver_match.url_name == 'loan-history' or request.resolver_match.url_name == 'reservations' or request.resolver_match.url_name == 'penalties' or request.resolver_match.url_name == 'scanner' %}is-open{% endif %}">
+        <button class="nav-link app-nav-trigger {% if request.resolver_match.url_name == 'all-borrowed' or request.resolver_match.url_name == 'loan-history' or request.resolver_match.url_name == 'reservations' or request.resolver_match.url_name == 'penalties' or request.resolver_match.url_name == 'scanner' %}active{% endif %}" type="button" aria-expanded="{% if request.resolver_match.url_name == 'all-borrowed' or request.resolver_match.url_name == 'loan-history' or request.resolver_match.url_name == 'reservations' or request.resolver_match.url_name == 'penalties' or request.resolver_match.url_name == 'scanner' %}true{% else %}false{% endif %}" aria-controls="circulation-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg><span>Circulation</span><span class="nav-chevron">⌄</span></button>
+        <div class="app-nav-menu" id="circulation-menu">{% if crud_permissions.view %}<a href="{% url 'all-borrowed' %}"><b>Active loans</b><small>Current checked-out books</small></a><a href="{% url 'loan-history' %}"><b>Loan history</b><small>Complete circulation record</small></a><a href="{% url 'reservations' %}"><b>Reservations</b><small>Member waiting list</small></a><a href="{% url 'penalties' %}"><b>Penalties</b><small>Charges and payments</small></a>{% endif %}{% if crud_permissions.change %}<a href="{% url 'scanner' %}"><b>QR circulation</b><small>Issue and return by scan</small></a>{% endif %}</div>
+      </div>
+      <div class="app-nav-group {% if request.resolver_match.url_name == 'members' or request.resolver_match.url_name == 'copies' or request.resolver_match.url_name == 'taxonomy' or request.resolver_match.url_name == 'book-create' or request.resolver_match.url_name == 'book-import-isbn' %}is-open{% endif %}">
+        <button class="nav-link app-nav-trigger {% if request.resolver_match.url_name == 'members' or request.resolver_match.url_name == 'copies' or request.resolver_match.url_name == 'taxonomy' or request.resolver_match.url_name == 'book-create' or request.resolver_match.url_name == 'book-import-isbn' %}active{% endif %}" type="button" aria-expanded="{% if request.resolver_match.url_name == 'members' or request.resolver_match.url_name == 'copies' or request.resolver_match.url_name == 'taxonomy' or request.resolver_match.url_name == 'book-create' or request.resolver_match.url_name == 'book-import-isbn' %}true{% else %}false{% endif %}" aria-controls="collection-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg><span>Collection</span><span class="nav-chevron">⌄</span></button>
+        <div class="app-nav-menu" id="collection-menu">{% if crud_permissions.view %}<a href="{% url 'members' %}"><b>Users & access</b><small>Roles and CRUD permissions</small></a><a href="{% url 'copies' %}"><b>Physical inventory</b><small>Copies and shelf locations</small></a><a href="{% url 'taxonomy' %}"><b>Authors and genres</b><small>Catalog classifications</small></a>{% endif %}{% if crud_permissions.add %}<a href="{% url 'book-create' %}"><b>Add a book</b><small>Create a catalog record</small></a><a href="{% url 'book-import-isbn' %}"><b>Import by ISBN</b><small>Fetch and review metadata</small></a>{% endif %}</div>
+      </div>
+      <div class="app-nav-group {% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'audit-dashboard' %}is-open{% endif %}">
+        <button class="nav-link app-nav-trigger {% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'audit-dashboard' %}active{% endif %}" type="button" aria-expanded="{% if request.resolver_match.url_name == 'reports' or request.resolver_match.url_name == 'audit-dashboard' %}true{% else %}false{% endif %}" aria-controls="insights-menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg><span>Insights</span><span class="nav-chevron">⌄</span></button>
+        <div class="app-nav-menu" id="insights-menu">{% if crud_permissions.view %}<a href="{% url 'reports' %}"><b>Reports</b><small>Analytics and exports</small></a><a href="{% url 'audit-dashboard' %}"><b>Audit log</b><small>Operational activity</small></a>{% endif %}</div>
+      </div>
+    </nav>
+  {% endif %}
+
+  <div class="sidebar-spacer"></div>
+  {% if user.is_authenticated %}
+    <div class="sidebar-support-card">
+      <span class="sidebar-support-icon">?</span>
+      <div><strong>{% if is_library_admin %}Need to trace a change?{% else %}Need help borrowing?{% endif %}</strong><small>{% if is_library_admin and crud_permissions.view %}<a href="{% url 'audit-dashboard' %}">Open the Shelfwise audit log</a>{% elif is_library_admin %}Ask the superadmin to grant View access.{% else %}Ask the library desk for assistance.{% endif %}</small></div>
+    </div>
+  {% else %}
+    <div class="sidebar-guest-card"><strong>Member access</strong><p>Sign in to see loans, due dates, and your library card.</p><a class="button full" href="{% url 'login' %}?next={{ request.path|urlencode }}">Sign in</a></div>
+  {% endif %}
+</aside>

@@ -1,0 +1,24 @@
+{% extends "base_generic.html" %}
+{% block title %}Sign in | Shelfwise{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block eyebrow %}Secure access{% endblock %}
+{% block page_title %}Welcome back{% endblock %}
+{% block page_subtitle %}One login for members, librarians, and administrators.{% endblock %}
+{% block content %}
+<div class="login-layout"><section class="login-card">
+  <div class="login-story">
+    <a class="login-brand" href="{% url 'index' %}"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><span><strong>Shelfwise</strong><small>Library management</small></span></a>
+    <h2>Your library, always within reach.</h2><p>Use one secure account to discover books, manage circulation, and run library operations.</p>
+    <div class="login-points"><div class="login-point"><span class="login-dot">✓</span> Search and borrow books</div><div class="login-point"><span class="login-dot">✓</span> Track loans, reservations, and penalties</div><div class="login-point"><span class="login-dot">✓</span> Role-based administrator access</div></div>
+  </div>
+  <div class="login-form"><span class="login-form-kicker">Account access</span><h2>Sign in</h2><p>Enter your Shelfwise credentials to continue.</p>
+    {% if form.errors %}<div class="form-error">The username or password is incorrect.</div>{% endif %}{% if next and not user.is_authenticated %}<div class="login-notice">Sign in to continue to the requested page.</div>{% endif %}
+    <form method="post" action="{% url 'login' %}">{% csrf_token %}
+      <div class="field"><label for="id_username">Username</label><input class="input" type="text" name="username" id="id_username" autocomplete="username" autofocus required placeholder="Enter your username"></div>
+      <div class="field"><label for="id_password">Password</label><div class="password-field"><input class="input" type="password" name="password" id="id_password" autocomplete="current-password" required placeholder="Enter your password"><button type="button" id="toggle-password" aria-label="Show password">Show</button></div></div>
+      <div class="login-options"><a href="{% url 'password_reset' %}">Forgot password?</a></div>
+      <input type="hidden" name="next" value="{{ next }}"><button class="button full" type="submit">Sign in securely</button>
+    </form><p class="login-help">Need a new account? Contact your library administrator.</p>
+  </div>
+</section></div>
+{% endblock %}

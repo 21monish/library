@@ -1,0 +1,36 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Reservations | Shelfwise{% endblock %}
+{% block eyebrow %}Waiting list{% endblock %}
+{% block page_title %}{% if is_library_admin %}Book reservations{% else %}My reservations{% endif %}{% endblock %}
+{% block page_subtitle %}Track waiting-list requests and their fulfillment status.{% endblock %}
+
+{% block content %}
+  <div class="section-heading">
+    <div><h2>Reservation history</h2><p>{{ reservation_list|length }} reservation{{ reservation_list|length|pluralize }} found.</p></div>
+    <a class="button secondary" href="{% url 'books' %}">Browse catalog</a>
+  </div>
+  {% if reservation_list %}
+    <div class="panel data-panel">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle library-table js-data-table" data-order-column="{% if is_library_admin %}2{% else %}1{% endif %}" data-order-direction="desc" data-actions-column="true">
+          <thead><tr><th>Book</th>{% if is_library_admin %}<th>Member</th>{% endif %}<th>Requested</th><th>Status</th><th>Resolved</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for reservation in reservation_list %}
+              <tr>
+                <td><a class="record-link" href="{{ reservation.book.get_absolute_url }}">{{ reservation.book.title }}</a></td>
+                {% if is_library_admin %}<td><strong>{{ reservation.borrower.username }}</strong></td>{% endif %}
+                <td data-order="{{ reservation.created_at|date:'Y-m-d H:i:s' }}">{{ reservation.created_at|date:"d M Y" }}</td>
+                <td><span class="badge {% if reservation.status == 'active' %}loan{% elif reservation.status == 'fulfilled' %}available{% else %}reserved{% endif %}">{{ reservation.get_status_display }}</span></td>
+                <td>{{ reservation.resolved_at|date:"d M Y"|default:"—" }}</td>
+                <td>{% if reservation.status == 'active' %}<div class="d-flex gap-2">{% if is_library_admin and crud_permissions.change %}<form method="post" action="{% url 'fulfill-reservation' reservation.pk %}" data-confirm="Mark this reservation as fulfilled for {{ reservation.borrower.username|escape }}?">{% csrf_token %}<button class="button small" type="submit">Fulfill</button></form><form method="post" action="{% url 'cancel-reservation' reservation.pk %}" data-confirm="Cancel this reservation for ‘{{ reservation.book.title|escape }}’?">{% csrf_token %}<button class="button small secondary" type="submit">Cancel</button></form>{% elif not is_library_admin %}<form method="post" action="{% url 'cancel-reservation' reservation.pk %}" data-confirm="Cancel this reservation for ‘{{ reservation.book.title|escape }}’?">{% csrf_token %}<button class="button small secondary" type="submit">Cancel</button></form>{% else %}<span class="desk-note">Change access required</span>{% endif %}</div>{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state"><span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12a2 2 0 0 1 2 2v16l-8-4-8 4V5a2 2 0 0 1 2-2Z"/></svg></span><h3>No reservations yet</h3><p>Reserve a title when all of its copies are unavailable.</p><a class="button" href="{% url 'books' %}">Browse books</a></div>
+  {% endif %}
+{% endblock %}

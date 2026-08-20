@@ -1,0 +1,76 @@
+{% extends "base_generic.html" %}
+
+{% block title %}{{ book.title }} | Shelfwise{% endblock %}
+{% block eyebrow %}Catalog record{% endblock %}
+{% block page_title %}Book details{% endblock %}
+{% block page_subtitle %}Bibliographic information and live copy availability.{% endblock %}
+
+{% block content %}
+  <div class="d-flex flex-wrap gap-2"><a class="button ghost" href="{% url 'books' %}">← Back to catalog</a>{% if crud_permissions.change %}<a class="button secondary" href="{% url 'book-update' book.pk %}">Edit book</a>{% endif %}{% if crud_permissions.delete %}<a class="button danger" href="{% url 'book-delete' book.pk %}">Delete</a>{% endif %}</div>
+
+  <div class="detail-grid section">
+    <article class="panel detail-main">
+      {% if book.cover_url %}<img class="detail-cover" src="{{ book.cover_url }}" alt="Cover of {{ book.title }}">{% endif %}
+      <span class="detail-kicker">ISBN {{ book.isbn }}</span>
+      <h2>{{ book.title }}</h2>
+      <div class="detail-author">
+        {% if book.author %}By {{ book.author.first_name }} {{ book.author.last_name }}{% else %}Author not specified{% endif %}
+      </div>
+      <div class="summary">{{ book.summary }}</div>
+      <div class="metadata">
+        <div><span class="meta-label">Genres</span><span class="meta-value">{% for genre in book.genre.all %}{{ genre.name }}{% if not forloop.last %}, {% endif %}{% empty %}General{% endfor %}</span></div>
+        <div><span class="meta-label">Author lifespan</span><span class="meta-value">{% if book.author.date_of_birth %}{{ book.author.date_of_birth|date:"Y" }}{% if book.author.date_of_death %}–{{ book.author.date_of_death|date:"Y" }}{% endif %}{% else %}Not recorded{% endif %}</span></div>
+      </div>
+    </article>
+    <aside class="panel detail-aside">
+      <h3>Copy availability</h3>
+      <p>Books are issued only by the library in-charge: students receive {{ loan_policy.student }} days and teachers receive {{ loan_policy.teacher }} days.</p>
+      <span class="availability-number">{{ available_count }}</span>
+      <span class="availability-label">of {{ copies|length }} copies available</span>
+      {% if not available_count and user.is_authenticated %}
+        <div class="mt-4">
+          {% if user_has_reservation %}
+            <a class="button secondary full" href="{% url 'reservations' %}">View my reservation</a>
+          {% else %}
+            <form method="post" action="{% url 'reserve-book' book.pk %}">{% csrf_token %}<button class="button full" type="submit">Reserve this title</button></form>
+          {% endif %}
+          {% if reservation_count %}<p class="mt-2">{{ reservation_count }} member{{ reservation_count|pluralize }} currently waiting.</p>{% endif %}
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <section class="section" aria-labelledby="copies-heading">
+    <div class="section-heading">
+      <div><h2 id="copies-heading">Physical copies</h2><p>Live circulation status for every registered copy.</p></div>
+    </div>
+    {% if copies %}
+      <div class="copy-list">
+        {% for copy in copies %}
+          <article class="copy-row">
+            <div>
+              <h3 class="copy-title">{{ copy.imprint }}</h3>
+              <div class="copy-id">Copy ID · {{ copy.id }}</div>
+            </div>
+            <div class="copy-actions">
+              {% if copy.due_back %}<span class="due {% if copy.is_overdue %}overdue{% endif %}">{% if copy.is_overdue %}Overdue · {% endif %}Due {{ copy.due_back|date:"d M Y" }}</span>{% endif %}
+              <span class="badge {% if copy.status == 'a' %}available{% elif copy.status == 'o' %}loan{% elif copy.status == 'm' %}maintenance{% else %}reserved{% endif %}">{{ copy.get_status_display }}</span>
+              {% if copy.status == 'a' %}
+                {% if is_library_admin and crud_permissions.change %}
+                  <a class="button small issue-book-button" href="{% url 'copy-detail' copy.pk %}#issue-book">Issue book</a>
+                {% else %}
+                  <span class="desk-note">Ask the library in-charge to issue</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>
+        <h3>No physical copies yet</h3><p>A librarian can add copies from the Shelfwise inventory workspace.</p>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

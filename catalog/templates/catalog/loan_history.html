@@ -1,0 +1,42 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Loan History | Shelfwise{% endblock %}
+{% block eyebrow %}Circulation records{% endblock %}
+{% block page_title %}{% if is_library_admin %}Complete loan history{% else %}My loan history{% endif %}{% endblock %}
+{% block page_subtitle %}Permanent records of issues, returns, renewals, and associated penalties.{% endblock %}
+
+{% block content %}
+  <div class="section-heading">
+    <div><h2>Circulation timeline</h2><p>{{ loan_list|length }} transaction{{ loan_list|length|pluralize }} found.</p></div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="button small {% if not status_filter %}active-filter{% else %}secondary{% endif %}" href="{% url 'loan-history' %}">All</a>
+      <a class="button small {% if status_filter == 'active' %}active-filter{% else %}secondary{% endif %}" href="?status=active">Active</a>
+      <a class="button small {% if status_filter == 'returned' %}active-filter{% else %}secondary{% endif %}" href="?status=returned">Returned</a>
+    </div>
+  </div>
+  {% if loan_list %}
+    <div class="panel data-panel">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle library-table js-data-table" data-order-column="{% if is_library_admin %}4{% else %}3{% endif %}" data-order-direction="desc" data-actions-column="true">
+          <thead><tr><th>Book</th>{% if is_library_admin %}<th>Member</th>{% endif %}<th>Issued</th><th>Due</th><th>Returned</th><th>Renewals</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for loan in loan_list %}
+              <tr>
+                <td><strong>{{ loan.book_title }}</strong>{% if loan.book_instance %}<div class="loan-meta">{{ loan.book_instance.imprint }}</div>{% endif %}</td>
+                {% if is_library_admin %}<td><strong>{{ loan.borrower.username }}</strong></td>{% endif %}
+                <td data-order="{{ loan.issued_at|date:'Y-m-d H:i:s' }}">{{ loan.issued_at|date:"d M Y" }}</td>
+                <td data-order="{{ loan.due_date|date:'Y-m-d' }}"><span class="due {% if loan.is_overdue %}overdue{% endif %}">{{ loan.due_date|date:"d M Y" }}</span></td>
+                <td data-order="{% if loan.returned_at %}{{ loan.returned_at|date:'Y-m-d H:i:s' }}{% endif %}">{{ loan.returned_at|date:"d M Y"|default:"—" }}</td>
+                <td>{{ loan.renewal_count }}</td>
+                <td><span class="badge {% if loan.status == 'active' %}loan{% elif loan.status == 'returned' %}available{% else %}maintenance{% endif %}">{{ loan.get_status_display }}</span></td>
+                <td>{% if loan.status == 'active' and is_library_admin and crud_permissions.change %}<form method="post" action="{% url 'renew-loan' loan.pk %}" data-confirm="Renew ‘{{ loan.book_title|escape }}’ for {{ loan.borrower.username|escape }}?">{% csrf_token %}<button class="button small secondary" type="submit">Renew</button></form>{% elif loan.status == 'active' %}<span class="desk-note">Contact an account with Change access</span>{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state"><span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><h3>No loan records</h3><p>Your borrowing history will appear here.</p></div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Catalog | Shelfwise{% endblock %}
+{% block eyebrow %}Collection{% endblock %}
+{% block page_title %}Browse the catalog{% endblock %}
+{% block page_subtitle %}Search by title, author, genre, or ISBN.{% endblock %}
+
+{% block content %}
+  <form class="panel catalog-filter-panel" method="get" action="{% url 'books' %}" role="search">
+    <div class="catalog-filter-grid">
+      <div class="field catalog-search-field"><label for="catalog-search">Search</label><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" id="catalog-search" type="search" name="q" value="{{ q }}" placeholder="Title, author, ISBN, or genre"></div></div>
+      <div class="field"><label for="catalog-genre">Genre</label><select class="input" id="catalog-genre" name="genre"><option value="">All genres</option>{% for genre in genres %}<option value="{{ genre.pk }}" {% if selected_genre == genre.pk|stringformat:'s' %}selected{% endif %}>{{ genre.name }} ({{ genre.book_count }})</option>{% endfor %}</select></div>
+      <div class="field"><label for="catalog-availability">Availability</label><select class="input" id="catalog-availability" name="availability"><option value="">Any status</option><option value="available" {% if availability_filter == 'available' %}selected{% endif %}>Available now</option><option value="unavailable" {% if availability_filter == 'unavailable' %}selected{% endif %}>Currently unavailable</option></select></div>
+      <div class="field"><label for="catalog-sort">Sort by</label><select class="input" id="catalog-sort" name="sort"><option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A–Z</option><option value="author" {% if selected_sort == 'author' %}selected{% endif %}>Author A–Z</option><option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Recently added</option><option value="availability" {% if selected_sort == 'availability' %}selected{% endif %}>Most available</option></select></div>
+    </div>
+    <div class="catalog-filter-actions"><button class="button" type="submit">Apply filters</button>{% if active_filter_count %}<a class="button ghost" href="{% url 'books' %}">Clear {{ active_filter_count }} filter{{ active_filter_count|pluralize }}</a>{% endif %}</div>
+  </form>
+
+  <div class="section-heading">
+    <div>
+      <h2>{% if q %}Results for “{{ q }}”{% else %}All books{% endif %}</h2>
+      <p>{{ page_obj.paginator.count }} title{{ page_obj.paginator.count|pluralize }} found{% if active_filter_count %} · {{ active_filter_count }} active filter{{ active_filter_count|pluralize }}{% endif %}</p>
+    </div>
+    {% if crud_permissions.add %}<a class="button" href="{% url 'book-create' %}">Add book</a>{% endif %}
+  </div>
+
+  {% if book_list %}
+    <div class="book-grid">
+      {% for book in book_list %}
+        <article class="book-card"><a class="book-card-link" href="{{ book.get_absolute_url }}">
+          {% if book.cover_url %}<img class="book-cover" src="{{ book.cover_url }}" alt="Cover of {{ book.title }}" loading="lazy" width="480" height="720">{% else %}<span class="book-cover placeholder {% cycle 'cover-tone-1' 'cover-tone-2' 'cover-tone-3' 'cover-tone-4' %}" aria-hidden="true"><span class="cover-initial">{{ book.title|first }}</span><strong>{{ book.title }}</strong><small>{% if book.author %}{{ book.author.first_name }} {{ book.author.last_name }}{% else %}Shelfwise collection{% endif %}</small></span>{% endif %}
+          <div class="book-card-body">
+            <span class="book-code">ISBN {{ book.isbn }}</span>
+            <h3>{{ book.title }}</h3>
+            <p class="book-author">{% if book.author %}by {{ book.author.first_name }} {{ book.author.last_name }}{% else %}Unknown author{% endif %}</p>
+            <div class="tags">
+              {% for genre in book.genre.all|slice:":3" %}<span class="tag">{{ genre.name }}</span>{% empty %}<span class="tag">General</span>{% endfor %}
+            </div>
+            <div class="book-card-footer"><span class="availability-inline"><i class="availability-dot {% if book.available_copies %}is-available{% endif %}"></i>{% if book.available_copies %}{{ book.available_copies }} available{% elif book.total_copies %}Currently unavailable{% else %}No copies yet{% endif %}</span><span aria-hidden="true">→</span></div>
+          </div>
+        </a>{% if crud_permissions.change or crud_permissions.delete %}<div class="book-crud-actions">{% if crud_permissions.change %}<a href="{% url 'book-update' book.pk %}">Edit</a>{% endif %}{% if crud_permissions.delete %}<a class="danger-link" href="{% url 'book-delete' book.pk %}">Delete</a>{% endif %}</div>{% endif %}</article>
+      {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+      <nav class="pagination" aria-label="Catalog pages">
+        {% if page_obj.has_previous %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+        <span class="page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <h3>No matching books</h3>
+      <p>Try a shorter title, an author's name, a genre, or the ISBN.</p>
+      <a class="button secondary" href="{% url 'books' %}">View the full catalog</a>
+    </div>
+  {% endif %}
+{% endblock %}

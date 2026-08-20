@@ -1,0 +1,22 @@
+{% extends "base_generic.html" %}
+{% block title %}Penalty receipt | Shelfwise{% endblock %}
+{% block eyebrow %}Receipt{% endblock %}
+{% block page_title %}Penalty {{ penalty.get_status_display|lower }}{% endblock %}
+{% block content %}
+<section class="panel receipt">
+  <div class="receipt-head"><div><strong>Shelfwise Library</strong><span>Receipt #{{ penalty.pk }}</span></div><button class="button secondary" onclick="window.print()">Print</button></div>
+  <dl>
+    <div><dt>Member</dt><dd>{{ penalty.borrower.get_full_name|default:penalty.borrower.username }}</dd></div>
+    <div><dt>Book</dt><dd>{{ penalty.book_title }}</dd></div>
+    <div><dt>Days overdue</dt><dd>{{ penalty.days_overdue }}</dd></div>
+    <div><dt>Amount</dt><dd>₹{{ penalty.amount }}</dd></div>
+    <div><dt>Status</dt><dd>{{ penalty.get_status_display }}</dd></div>
+    <div><dt>Resolved</dt><dd>{{ penalty.resolved_at|date:'d M Y H:i' }}</dd></div>
+    {% with payment=penalty.transactions.first %}{% if payment %}
+      <div><dt>Method</dt><dd>{{ payment.get_method_display }}</dd></div>
+      <div><dt>Reference</dt><dd>{{ payment.reference|default:'—' }}</dd></div>
+      <div><dt>Recorded by</dt><dd>{{ payment.recorded_by|default:'System' }}</dd></div>
+    {% endif %}{% endwith %}
+  </dl>
+</section>
+{% endblock %}

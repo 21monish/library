@@ -1,0 +1,6 @@
+{% extends "base_generic.html" %}
+{% block title %}Access restricted | Shelfwise{% endblock %}
+{% block eyebrow %}Error 403{% endblock %}
+{% block page_title %}Access restricted{% endblock %}
+{% block page_subtitle %}Your account does not have permission to open this page.{% endblock %}
+{% block content %}<section class="empty-state error-state"><span class="empty-icon">!</span><h2>This area is restricted</h2><p>Return to your dashboard or contact a library administrator if you need access.</p><div class="crud-actions"><a class="button" href="{% url 'index' %}">Return to dashboard</a></div></section>{% endblock %}

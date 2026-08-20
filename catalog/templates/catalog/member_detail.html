@@ -1,0 +1,24 @@
+{% extends "base_generic.html" %}
+{% block title %}{{ member.username }} | Shelfwise{% endblock %}
+{% block eyebrow %}Member record{% endblock %}
+{% block page_title %}{{ member.get_full_name|default:member.username }}{% endblock %}
+{% block page_subtitle %}Account status, circulation history, and financial summary.{% endblock %}
+{% block content %}
+<section class="member-profile panel">
+  <div class="member-profile-main">
+    {% if member.profile.photo_url %}<img src="{{ member.profile.photo_url }}" alt="{{ member.get_full_name|default:member.username }} profile photo">{% else %}<span class="member-profile-placeholder">{{ member.username|first }}</span>{% endif %}
+    <div><span class="badge {% if member.is_active %}available{% else %}maintenance{% endif %}">{% if member.is_active %}Active{% else %}Inactive{% endif %}</span><h2>{{ member.get_full_name|default:member.username }}</h2><p>@{{ member.username }} · {{ member.profile.get_role_display }}{% if member.email %} · {{ member.email }}{% endif %}</p></div>
+  </div>
+  <div class="crud-actions">{% if crud_permissions.change %}<a class="button" href="{% url 'member-update' member.pk %}">Edit role and permissions</a>{% endif %}<a class="button secondary" href="{% url 'member-qr' member.pk %}">Member QR</a>{% if crud_permissions.delete and not member.is_superuser and member != user %}<a class="button danger" href="{% url 'member-delete' member.pk %}">Delete</a>{% endif %}</div>
+</section>
+<section class="stats-grid section">
+  <article class="stat-card"><span class="stat-label">Active loans</span><div class="stat-value">{{ active_loans }}</div></article>
+  <article class="stat-card"><span class="stat-label">Loan history</span><div class="stat-value">{{ loans|length }}</div></article>
+  <article class="stat-card"><span class="stat-label">Outstanding penalties</span><div class="stat-value">₹{{ unpaid_total }}</div></article>
+  <article class="stat-card"><span class="stat-label">Joined</span><div class="stat-value date-value">{{ member.date_joined|date:'d M Y' }}</div></article>
+</section>
+<div class="report-grid section">
+  <section class="data-panel"><div class="section-heading"><div><h2>Recent loans</h2><p>Latest borrowing activity</p></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Book</th><th>Issued</th><th>Due</th><th>Status</th></tr></thead><tbody>{% for loan in loans %}<tr><td><strong>{{ loan.book_title }}</strong></td><td>{{ loan.issued_at|date:'d M Y' }}</td><td><span class="due {% if loan.is_overdue %}overdue{% endif %}">{{ loan.due_date|date:'d M Y' }}</span></td><td><span class="badge {% if loan.status == 'active' %}loan{% elif loan.status == 'returned' %}available{% else %}maintenance{% endif %}">{{ loan.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="4">No loan history.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="data-panel"><div class="section-heading"><div><h2>Penalties</h2><p>Recorded overdue charges</p></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Book</th><th>Amount</th><th>Status</th></tr></thead><tbody>{% for penalty in penalties %}<tr><td>{{ penalty.book_title }}</td><td><strong>₹{{ penalty.amount }}</strong></td><td><span class="badge {% if penalty.status == 'unpaid' %}maintenance{% elif penalty.status == 'paid' %}available{% else %}reserved{% endif %}">{{ penalty.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="3">No penalties.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}

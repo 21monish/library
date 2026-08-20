@@ -1,0 +1,29 @@
+{% extends "base_generic.html" %}
+
+{% block title %}QR Labels | Shelfwise{% endblock %}
+{% block eyebrow %}Print center{% endblock %}
+{% block page_title %}QR labels and member cards{% endblock %}
+{% block page_subtitle %}Print durable circulation identifiers for copies and members.{% endblock %}
+
+{% block content %}
+  <div class="print-toolbar d-flex gap-2 flex-wrap mb-4">
+    <button class="button" type="button" onclick="window.print()">Print this page</button>
+    <a class="button secondary" href="{% url 'scanner' %}">Open scanner</a>
+  </div>
+  <ul class="nav nav-pills mb-4 print-toolbar" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#copy-labels" type="button">Copy labels ({{ copies|length }})</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#member-cards" type="button">Member cards ({{ members|length }})</button></li>
+  </ul>
+  <div class="tab-content">
+    <section class="tab-pane fade show active" id="copy-labels">
+      <div class="label-grid">
+        {% for copy in copies %}<article class="qr-label"><img src="{% url 'copy-qr' copy.pk %}" alt="QR code for {{ copy.book.title }}"><div><strong>{{ copy.book.title }}</strong><span>{{ copy.imprint }}</span><small>{{ copy.pk }}</small></div></article>{% endfor %}
+      </div>
+    </section>
+    <section class="tab-pane fade" id="member-cards">
+      <div class="label-grid">
+        {% for member in members %}<article class="qr-label member-card"><img src="{% url 'member-qr' member.pk %}" alt="Member QR for {{ member.username }}"><div><strong>{{ member.get_full_name|default:member.username }}</strong><span>@{{ member.username }}</span><small>Member ID {{ member.pk }}</small></div></article>{% endfor %}
+      </div>
+    </section>
+  </div>
+{% endblock %}

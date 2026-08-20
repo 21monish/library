@@ -1,0 +1,67 @@
+{% extends "base_generic.html" %}
+{% block title %}Reports · Shelfwise{% endblock %}
+{% block eyebrow %}Administration{% endblock %}
+{% block page_title %}Reports & analytics{% endblock %}
+{% block page_subtitle %}Circulation, collection, penalties, and operational activity in one view.{% endblock %}
+
+{% block content %}
+<section class="report-toolbar card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form class="row g-3 align-items-end" method="get">
+      <div class="col-sm-4 col-lg-3">
+        <label class="form-label fw-semibold" for="date_from">From</label>
+        <input class="form-control" type="date" id="date_from" name="date_from" value="{{ report.start|date:'Y-m-d' }}">
+      </div>
+      <div class="col-sm-4 col-lg-3">
+        <label class="form-label fw-semibold" for="date_to">To</label>
+        <input class="form-control" type="date" id="date_to" name="date_to" value="{{ report.end|date:'Y-m-d' }}">
+      </div>
+      <div class="col-sm-4 col-lg-auto"><button class="button w-100" type="submit">Apply period</button></div>
+      <div class="col-lg ms-lg-auto">
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+          <a class="button secondary" href="{% url 'report-csv' %}?date_from={{ report.start|date:'Y-m-d' }}&date_to={{ report.end|date:'Y-m-d' }}">CSV</a>
+          <a class="button secondary" href="{% url 'report-xlsx' %}?date_from={{ report.start|date:'Y-m-d' }}&date_to={{ report.end|date:'Y-m-d' }}">Excel</a>
+          <a class="button secondary" href="{% url 'report-pdf' %}?date_from={{ report.start|date:'Y-m-d' }}&date_to={{ report.end|date:'Y-m-d' }}">PDF</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div class="stats-grid mb-4">
+  <article class="stat-card"><span>Loans issued</span><strong>{{ report.metrics.loans }}</strong><small>{{ report.start|date:'d M' }} – {{ report.end|date:'d M Y' }}</small></article>
+  <article class="stat-card"><span>Items returned</span><strong>{{ report.metrics.returns }}</strong><small>Completed in selected period</small></article>
+  <article class="stat-card"><span>Active / overdue</span><strong>{{ report.metrics.active }} / {{ report.metrics.overdue }}</strong><small>Current portfolio</small></article>
+  <article class="stat-card"><span>Outstanding penalties</span><strong>₹{{ report.metrics.penalties_outstanding }}</strong><small>₹{{ report.metrics.penalties_collected }} collected</small></article>
+</div>
+
+<div class="report-grid mb-4">
+  <section class="card border-0 shadow-sm"><div class="card-body"><div class="section-heading"><div><p class="eyebrow">Trend</p><h2>Loans over time</h2></div></div><div class="chart-wrap"><canvas id="loanTrend"></canvas></div></div></section>
+  <section class="card border-0 shadow-sm"><div class="card-body"><div class="section-heading"><div><p class="eyebrow">Distribution</p><h2>Loan status</h2></div></div><div class="chart-wrap compact"><canvas id="loanStatus"></canvas></div></div></section>
+</div>
+
+<div class="report-grid mb-4">
+  <section class="card border-0 shadow-sm"><div class="card-body"><div class="section-heading"><div><p class="eyebrow">Demand</p><h2>Popular genres</h2></div></div><div class="chart-wrap"><canvas id="genreChart"></canvas></div></div></section>
+  <section class="card border-0 shadow-sm"><div class="card-body"><div class="section-heading"><div><p class="eyebrow">Operations</p><h2>Period snapshot</h2></div></div><dl class="report-facts"><div><dt>Reservations placed</dt><dd>{{ report.metrics.reservations }}</dd></div><div><dt>QR scans</dt><dd>{{ report.metrics.scans }}</dd></div><div><dt>Scan success rate</dt><dd>{{ report.metrics.scan_success_rate }}%</dd></div><div><dt>Inventory available</dt><dd>{{ report.metrics.available }} / {{ report.metrics.inventory }}</dd></div><div><dt>Penalties assessed</dt><dd>₹{{ report.metrics.penalties_assessed }}</dd></div><div><dt>Penalties waived</dt><dd>₹{{ report.metrics.penalties_waived }}</dd></div></dl></div></section>
+</div>
+
+<div class="report-grid">
+  <section class="data-panel"><div class="section-heading"><div><p class="eyebrow">Top 10</p><h2>Most borrowed books</h2></div></div><div class="table-responsive"><table class="table align-middle js-data-table" data-page-length="5" data-order-column="1" data-order-direction="desc"><thead><tr><th>Book</th><th>Loans</th></tr></thead><tbody>{% for row in report.top_books %}<tr><td>{{ row.book_title }}</td><td>{{ row.total }}</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="data-panel"><div class="section-heading"><div><p class="eyebrow">Top 10</p><h2>Most active members</h2></div></div><div class="table-responsive"><table class="table align-middle js-data-table" data-page-length="5" data-order-column="1" data-order-direction="desc"><thead><tr><th>Member</th><th>Loans</th></tr></thead><tbody>{% for row in report.top_members %}<tr><td>{% if row.borrower__first_name %}{{ row.borrower__first_name }} {{ row.borrower__last_name }} <small class="text-muted">({{ row.borrower__username }})</small>{% else %}{{ row.borrower__username }}{% endif %}</td><td>{{ row.total }}</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+
+{{ report.monthly|json_script:"monthly-data" }}
+{{ report.statuses|json_script:"status-data" }}
+{{ report.genres|json_script:"genre-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const read = id => JSON.parse(document.getElementById(id).textContent);
+  const monthly = read('monthly-data'), statuses = read('status-data'), genres = read('genre-data');
+  const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } };
+  new Chart(document.getElementById('loanTrend'), { type: 'line', data: { labels: monthly.map(x => x.label), datasets: [{ data: monthly.map(x => x.total), borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.12)', fill: true, tension: .32, pointRadius: 4 }] }, options: common });
+  new Chart(document.getElementById('loanStatus'), { type: 'doughnut', data: { labels: statuses.map(x => x.label), datasets: [{ data: statuses.map(x => x.total), backgroundColor: ['#4f46e5','#fbbf24','#ef6a5b','#60a5fa'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+  new Chart(document.getElementById('genreChart'), { type: 'bar', data: { labels: genres.map(x => x.label), datasets: [{ data: genres.map(x => x.total), backgroundColor: '#818cf8', borderRadius: 7 }] }, options: common });
+});
+</script>
+{% endblock %}

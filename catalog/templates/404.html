@@ -1,0 +1,6 @@
+{% extends "base_generic.html" %}
+{% block title %}Page not found | Shelfwise{% endblock %}
+{% block eyebrow %}Error 404{% endblock %}
+{% block page_title %}Page not found{% endblock %}
+{% block page_subtitle %}The page may have moved, or the address may be incorrect.{% endblock %}
+{% block content %}<section class="empty-state error-state"><span class="empty-icon">404</span><h2>We could not find that page</h2><p>Return to the dashboard or browse the library catalog.</p><div class="crud-actions"><a class="button" href="{% url 'index' %}">Go to dashboard</a><a class="button secondary" href="{% url 'books' %}">Browse catalog</a></div></section>{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base_generic.html" %}
+{% block title %}Delete {{ book.title }} | Shelfwise{% endblock %}
+{% block eyebrow %}Catalog management{% endblock %}
+{% block page_title %}Delete book{% endblock %}
+{% block page_subtitle %}Review the impact before permanently removing this record.{% endblock %}
+{% block content %}<section class="panel delete-confirmation"><span class="delete-icon">!</span><h2>Delete “{{ book.title }}”?</h2><p>This will remove the book and {{ copy_count }} physical cop{{ copy_count|pluralize:"y,ies" }}. Historical loan titles remain in circulation history, but this operation cannot be undone.</p><dl><div><dt>ISBN</dt><dd>{{ book.isbn }}</dd></div><div><dt>Author</dt><dd>{{ book.author }}</dd></div><div><dt>Copies</dt><dd>{{ copy_count }}</dd></div></dl><form method="post">{% csrf_token %}<div class="crud-actions"><button class="button danger" type="submit">Yes, delete permanently</button><a class="button secondary" href="{{ book.get_absolute_url }}">Cancel</a></div></form></section>{% endblock %}

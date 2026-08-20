@@ -1,0 +1,39 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Manage Loans | Shelfwise{% endblock %}
+{% block eyebrow %}Circulation desk{% endblock %}
+{% block page_title %}Manage borrowed books{% endblock %}
+{% block page_subtitle %}Review active loans, fines, and process returned copies.{% endblock %}
+
+{% block content %}
+  <div class="section-heading">
+    <div><h2>Current circulation</h2><p>{{ bookinstance_list|length }} active loan{{ bookinstance_list|length|pluralize }} across all members.</p></div>
+    <div class="d-flex gap-2 flex-wrap"><a class="button secondary" href="{% url 'copies' %}">Open inventory</a><a class="button" href="{% url 'scanner' %}">Scan issue / return</a></div>
+  </div>
+  {% if bookinstance_list %}
+    <div class="panel data-panel">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle library-table js-data-table" data-order-column="3" data-order-direction="asc" data-actions-column="true">
+          <thead><tr><th>Book</th><th>Borrower</th><th>Copy</th><th>Due date</th><th>Fine / status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for bookinst in bookinstance_list %}
+              <tr>
+                <td><a class="record-link" href="{{ bookinst.book.get_absolute_url }}">{{ bookinst.book.title }}</a></td>
+                <td><strong>{{ bookinst.borrower.username|default:"Unknown member" }}</strong></td>
+                <td>{{ bookinst.imprint }}<div class="loan-meta">{{ bookinst.id }}</div></td>
+                <td data-order="{{ bookinst.due_back|date:'Y-m-d' }}"><span class="due {% if bookinst.is_overdue %}overdue{% endif %}">{% if bookinst.is_overdue %}Overdue since{% else %}Due{% endif %} {{ bookinst.due_back|date:"d M Y" }}</span></td>
+                <td data-order="{{ bookinst.fine_amount }}">{% if bookinst.fine_amount %}<span class="badge maintenance">Fine ₹{{ bookinst.fine_amount }}</span>{% else %}<span class="badge loan">On loan</span>{% endif %}</td>
+                <td><form method="post" action="{% url 'return-copy' bookinst.id %}" data-confirm="Return this copy from {{ bookinst.borrower.username|escape }}? Any overdue penalty will be recorded automatically.">{% csrf_token %}<button class="button small" type="submit">Mark returned</button></form></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span>
+      <h3>Everything is checked in</h3><p>There are no active loans requiring attention.</p>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base_generic.html" %}
+{% block title %}Something went wrong | Shelfwise{% endblock %}
+{% block eyebrow %}Error 500{% endblock %}
+{% block page_title %}Something went wrong{% endblock %}
+{% block page_subtitle %}The request could not be completed right now.{% endblock %}
+{% block content %}<section class="empty-state error-state"><span class="empty-icon">!</span><h2>Please try again</h2><p>If the problem continues, contact the library administrator.</p><div class="crud-actions"><a class="button" href="/">Return to dashboard</a></div></section>{% endblock %}

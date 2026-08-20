@@ -1,0 +1,121 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Dashboard | Shelfwise{% endblock %}
+{% block eyebrow %}{% if is_library_admin %}Operations{% elif user.is_authenticated %}My library{% else %}Welcome{% endif %}{% endblock %}
+{% block page_title %}{% if is_library_admin %}Circulation dashboard{% elif user.is_authenticated %}My library dashboard{% else %}Library dashboard{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_library_admin %}Today’s circulation, requests, and collection health.{% elif user.is_authenticated %}Your books, due dates, reservations, and charges at a glance.{% else %}Discover books and see what is available now.{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="hero dashboard-hero">
+    <div class="hero-copy">
+      {% if is_library_admin %}
+        <span class="hero-kicker">Circulation workspace</span>
+        <h2>Good to see you, {% firstof user.first_name user.username %}.</h2>
+        <p>Run today’s desk, resolve overdue items, and keep every member moving.</p>
+        <div class="hero-actions">{% if crud_permissions.change %}<a class="button" href="{% url 'copies' %}">Issue a book</a><a class="button secondary" href="{% url 'scanner' %}">Open QR desk</a>{% elif crud_permissions.view %}<a class="button" href="{% url 'reports' %}">View reports</a>{% else %}<span class="desk-note">Your account has no staff workspace permissions. Ask the superadmin to update your access.</span>{% endif %}</div>
+      {% elif user.is_authenticated %}
+        <span class="hero-kicker">{{ user.profile.get_role_display }} account</span>
+        <h2>Hello, {% firstof user.first_name user.username %}.</h2>
+        <p>Your borrowing window is {{ member_loan_days }} days, with up to {{ member_loan_limit }} active books at a time.</p>
+        <div class="hero-actions"><a class="button" href="{% url 'books' %}">Find a book</a><a class="button secondary" href="{% url 'library-card' %}">Open my library card</a></div>
+      {% else %}
+        <span class="hero-kicker">Your library, organized</span>
+        <h2>Discover, borrow, and keep learning.</h2>
+        <p>Explore the catalog, then visit the library desk to have an available copy issued to your account.</p>
+        <div class="hero-actions"><a class="button" href="{% url 'books' %}">Explore the catalog</a><a class="button secondary" href="{% url 'login' %}">Sign in</a></div>
+      {% endif %}
+    </div>
+    <div class="hero-panel">
+      {% if is_library_admin and crud_permissions.view %}
+        <span class="hero-panel-label">Open circulation</span><strong>{{ num_instances_issued }}</strong><p>copies are currently checked out; {{ num_instances_overdue }} are overdue.</p>
+      {% elif is_library_admin %}
+        <span class="hero-panel-label">Access restricted</span><strong>Permissions</strong><p>Ask the superadmin to grant the View permission for staff records.</p>
+      {% elif user.is_authenticated %}
+        <span class="hero-panel-label">{% if next_due_loan %}{% if next_due_loan.is_overdue %}Needs attention{% else %}Next return{% endif %}{% else %}Account status{% endif %}</span>
+        <strong>{% if next_due_loan %}{{ next_due_loan.due_date|date:"d M" }}{% else %}All clear{% endif %}</strong>
+        <p>{% if next_due_loan %}{{ next_due_loan.book_title }}{% else %}You currently have no books to return.{% endif %}</p>
+      {% else %}
+        <span class="hero-panel-label">Available right now</span><strong>{{ num_instances_available }}</strong><p>physical copies are ready to borrow from the collection.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if is_library_admin and crud_permissions.view %}
+    <section class="section" aria-labelledby="desk-overview-heading">
+      <div class="section-heading"><div><h2 id="desk-overview-heading">Today at the desk</h2><p>Live circulation signals that need your attention.</p></div>{% if crud_permissions.view %}<a class="button secondary" href="{% url 'reports' %}">View reports</a>{% endif %}</div>
+      <div class="stats-grid">
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Issued today</span><span class="stat-icon info">↗</span></div><div class="stat-value">{{ issued_today }}</div><div class="stat-label">New checkouts recorded today</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Returned today</span><span class="stat-icon">↙</span></div><div class="stat-value">{{ returned_today }}</div><div class="stat-label">Copies checked back in today</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Overdue</span><span class="stat-icon danger">!</span></div><div class="stat-value">{{ num_instances_overdue }}</div><div class="stat-label">Loans requiring follow-up</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Waiting list</span><span class="stat-icon warning">⌛</span></div><div class="stat-value">{{ active_reservation_count }}</div><div class="stat-label">Active member reservations</div></article>
+      </div>
+    </section>
+
+    <section class="section dashboard-split">
+      <article class="panel panel-body">
+        <div class="section-heading"><div><h2>Recent circulation</h2><p>The latest checkout activity.</p></div>{% if crud_permissions.view %}<a class="button ghost small" href="{% url 'loan-history' %}">Full history</a>{% endif %}</div>
+        <div class="activity-list-clean">
+          {% for loan in recent_loans %}
+            <div class="activity-row"><span class="activity-mark {% if loan.status == 'active' %}active{% endif %}"></span><div><strong>{{ loan.book_title }}</strong><small>{{ loan.borrower.username }} · issued {{ loan.issued_at|timesince }} ago</small></div><span class="badge {% if loan.status == 'active' %}loan{% else %}available{% endif %}">{{ loan.get_status_display }}</span></div>
+          {% empty %}<div class="compact-empty">No circulation has been recorded yet.</div>{% endfor %}
+        </div>
+      </article>
+      <aside class="panel panel-body action-panel">
+        <span class="meta-label">Quick actions</span><h2>Run the library</h2><p>Daily workflows stay in Shelfwise. System administration is reserved for advanced configuration.</p>
+        <div class="quick-action-grid">
+          {% if crud_permissions.change %}<a href="{% url 'copies' %}"><strong>Issue or return</strong><small>Open physical inventory</small></a>{% endif %}
+          {% if crud_permissions.view %}<a href="{% url 'members' %}"><strong>Find a member</strong><small>Accounts and borrowing status</small></a>
+          <a href="{% url 'reservations' %}"><strong>Waiting list</strong><small>Review member requests</small></a>
+          <a href="{% url 'penalties' %}"><strong>{% if crud_permissions.change %}Resolve{% else %}Review{% endif %} charges</strong><small>{{ unpaid_penalty_count }} unpaid record{{ unpaid_penalty_count|pluralize }}</small></a>{% endif %}
+        </div>
+      </aside>
+    </section>
+  {% elif is_library_admin %}
+    <section class="section panel panel-body visitor-cta"><div><span class="meta-label">Staff access</span><h2>No workspace permissions assigned</h2><p>Your Library role is active, but View, Add, Change, and Delete access are currently disabled. Contact the superadmin to update this account.</p></div><div class="top-actions"><a class="button secondary" href="{% url 'account-settings' %}">My account</a><a class="button" href="{% url 'books' %}">Public catalog</a></div></section>
+  {% elif user.is_authenticated %}
+    <section class="section" aria-labelledby="account-overview-heading">
+      <div class="section-heading"><div><h2 id="account-overview-heading">My account</h2><p>The things that matter before your next library visit.</p></div><a class="button secondary" href="{% url 'notifications' %}">Notifications{% if unread_notification_count %} · {{ unread_notification_count }}{% endif %}</a></div>
+      <div class="stats-grid member-stats">
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Active books</span><span class="stat-icon info">▤</span></div><div class="stat-value">{{ member_active_loans|length }}</div><div class="stat-label">of {{ member_loan_limit }} allowed at one time</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Due soon</span><span class="stat-icon warning">⌛</span></div><div class="stat-value">{{ member_due_soon_count }}</div><div class="stat-label">Due within the next three days</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Overdue</span><span class="stat-icon danger">!</span></div><div class="stat-value">{{ member_overdue_count }}</div><div class="stat-label">Books that need to be returned</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Current charges</span><span class="stat-icon {% if user_fines %}danger{% endif %}">₹</span></div><div class="stat-value">₹{{ user_fines }}</div><div class="stat-label">Live and recorded overdue charges</div></article>
+      </div>
+    </section>
+
+    <section class="section dashboard-split">
+      <article class="panel panel-body">
+        <div class="section-heading"><div><h2>Books with me</h2><p>Sorted by the nearest due date.</p></div><a class="button ghost small" href="{% url 'my-borrowed' %}">View all</a></div>
+        <div class="member-loan-list">
+          {% for loan in member_active_loans|slice:":4" %}
+            <div class="member-loan-row">
+              <div class="mini-book-cover">{{ loan.book_title|first }}</div>
+              <div class="member-loan-copy"><strong>{{ loan.book_title }}</strong><small>{% if loan.book_instance and loan.book_instance.book.author %}{{ loan.book_instance.book.author.first_name }} {{ loan.book_instance.book.author.last_name }} · {% endif %}{% if loan.is_overdue %}Overdue{% else %}Due{% endif %} {{ loan.due_date|date:"d M Y" }}</small></div>
+              <span class="badge {% if loan.is_overdue %}maintenance{% else %}loan{% endif %}">{% if loan.is_overdue %}Return now{% else %}On loan{% endif %}</span>
+            </div>
+          {% empty %}
+            <div class="compact-empty"><strong>Your shelf is clear.</strong><span>Browse the catalog and ask the library desk to issue your next book.</span><a class="button small" href="{% url 'books' %}">Explore books</a></div>
+          {% endfor %}
+        </div>
+      </article>
+      <aside class="panel panel-body account-panel">
+        <span class="meta-label">My borrowing policy</span><h2>{{ user.profile.get_role_display }}</h2>
+        <dl class="account-facts">
+          <div><dt>Loan period</dt><dd>{{ member_loan_days }} days</dd></div><div><dt>Book limit</dt><dd>{{ member_loan_limit }} books</dd></div><div><dt>Reservations</dt><dd>{{ member_reservation_count }} active</dd></div><div><dt>Late charge</dt><dd>₹{{ penalty_per_day }} / day</dd></div>
+        </dl>
+        <a class="button full" href="{% url 'library-card' %}">Show my library card</a>
+      </aside>
+    </section>
+  {% else %}
+    <section class="section" aria-labelledby="overview-heading">
+      <div class="section-heading"><div><h2 id="overview-heading">Collection overview</h2><p>Live totals from the library database.</p></div></div>
+      <div class="stats-grid">
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Book titles</span><span class="stat-icon">▤</span></div><div class="stat-value">{{ num_books }}</div><div class="stat-label">Unique works in the catalog</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Physical copies</span><span class="stat-icon info">▥</span></div><div class="stat-value">{{ num_instances }}</div><div class="stat-label">Across every availability state</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Available now</span><span class="stat-icon">✓</span></div><div class="stat-value">{{ num_instances_available }}</div><div class="stat-label">Ready to issue at the library desk</div></article>
+        <article class="stat-card"><div class="stat-top"><span class="stat-label">Authors</span><span class="stat-icon warning">✦</span></div><div class="stat-value">{{ num_authors }}</div><div class="stat-label">Writers represented in the collection</div></article>
+      </div>
+    </section>
+    <section class="section panel panel-body visitor-cta"><div><span class="meta-label">Library membership</span><h2>Already have an account?</h2><p>Sign in to see due dates, reservations, notifications, and your digital library card.</p></div><div class="top-actions"><a class="button secondary" href="{% url 'books' %}">Browse first</a><a class="button" href="{% url 'login' %}">Sign in</a></div></section>
+  {% endif %}
+{% endblock %}

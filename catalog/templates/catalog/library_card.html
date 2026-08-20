@@ -1,0 +1,41 @@
+{% extends "base_generic.html" %}
+
+{% block title %}My Library Card | Shelfwise{% endblock %}
+{% block eyebrow %}My account{% endblock %}
+{% block page_title %}My library card{% endblock %}
+{% block page_subtitle %}Show this QR card at the circulation desk when borrowing or returning books.{% endblock %}
+
+{% block content %}
+  <div class="library-card-layout">
+    <article class="digital-card" aria-label="Shelfwise membership card">
+      <div class="digital-card-head">
+        <div class="digital-card-brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>Shelfwise</div>
+        <span class="digital-card-status">Active member</span>
+      </div>
+      <div class="digital-card-member">
+        {% if user.profile.photo_url %}<img class="digital-card-avatar avatar-photo" src="{{ user.profile.photo_url }}" alt="{{ user.username }} profile photo">{% else %}<span class="digital-card-avatar">{{ user.username|first }}</span>{% endif %}
+        <div><span>Member name</span><strong>{% firstof user.get_full_name user.username %}</strong></div>
+      </div>
+      <div class="digital-card-meta">
+        <div><span>Member ID</span><strong>SW-{{ user.pk|stringformat:"05d" }}</strong></div>
+        <div><span>Membership</span><strong>{{ user.profile.get_role_display }}</strong></div>
+        <div><span>Loan policy</span><strong>{{ loan_days }} days · {{ loan_limit }} books</strong></div>
+      </div>
+    </article>
+
+    <aside class="panel card-qr-panel">
+      <img src="{% url 'member-qr' user.pk %}" alt="QR code for member {{ user.username }}">
+      <h2>Scan at the library desk</h2>
+      <p>This code identifies your account. It does not allow self-checkout.</p>
+    </aside>
+  </div>
+
+  <section class="section">
+    <div class="stats-grid">
+      <article class="stat-card"><div class="stat-top"><span class="stat-label">Active books</span><span class="stat-icon info">▤</span></div><div class="stat-value">{{ active_loan_count }}</div><div class="stat-label">Currently issued to your account</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-label">Reservations</span><span class="stat-icon warning">⌛</span></div><div class="stat-value">{{ active_reservation_count }}</div><div class="stat-label">Active waiting-list requests</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-label">Recorded balance</span><span class="stat-icon {% if unpaid_total %}danger{% endif %}">₹</span></div><div class="stat-value">₹{{ unpaid_total }}</div><div class="stat-label">Unpaid returned-book penalties</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-label">Late charge</span><span class="stat-icon">₹</span></div><div class="stat-value">₹{{ penalty_per_day }}</div><div class="stat-label">Per overdue day</div></article>
+    </div>
+  </section>
+{% endblock %}

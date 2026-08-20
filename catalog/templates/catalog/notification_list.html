@@ -1,0 +1,41 @@
+{% extends "base_generic.html" %}
+
+{% block title %}Notifications | Shelfwise{% endblock %}
+{% block eyebrow %}Updates{% endblock %}
+{% block page_title %}Notification center{% endblock %}
+{% block page_subtitle %}Due dates, overdue reminders, reservations, and operational alerts.{% endblock %}
+
+{% block content %}
+  <div class="section-heading">
+    <div><h2>Your notifications</h2><p>{{ notification_list|length }} alert{{ notification_list|length|pluralize }} found.</p></div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="button small {% if not status_filter %}active-filter{% else %}secondary{% endif %}" href="{% url 'notifications' %}">All</a>
+      <a class="button small {% if status_filter == 'unread' %}active-filter{% else %}secondary{% endif %}" href="?status=unread">Unread</a>
+      <a class="button small {% if status_filter == 'read' %}active-filter{% else %}secondary{% endif %}" href="?status=read">Read</a>
+      {% if unread_notification_count %}<form method="post" action="{% url 'mark-all-notifications-read' %}">{% csrf_token %}<button class="button small secondary" type="submit">Mark all read</button></form>{% endif %}
+    </div>
+  </div>
+  {% if notification_list %}
+    <div class="panel data-panel">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle library-table js-data-table" data-order-column="3" data-order-direction="desc" data-actions-column="true">
+          <thead><tr><th>Alert</th><th>Type</th><th>Email</th><th>Created</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for notification in notification_list %}
+              <tr class="{% if not notification.is_read %}notification-unread{% endif %}">
+                <td><strong>{{ notification.title }}</strong><div class="loan-meta">{{ notification.message }}</div></td>
+                <td><span class="badge {% if notification.notification_type == 'overdue' %}maintenance{% elif notification.notification_type == 'reservation' %}available{% else %}loan{% endif %}">{{ notification.get_notification_type_display }}</span></td>
+                <td><span class="loan-meta">{{ notification.get_email_status_display }}</span></td>
+                <td data-order="{{ notification.created_at|date:'Y-m-d H:i:s' }}">{{ notification.created_at|date:"d M Y, H:i" }}</td>
+                <td>{% if notification.is_read %}<span class="badge available">Read</span>{% else %}<span class="badge reserved">New</span>{% endif %}</td>
+                <td><div class="d-flex gap-2 flex-wrap">{% if notification.link %}<a class="button small" href="{{ notification.link }}">Open</a>{% endif %}{% if not notification.is_read %}<form method="post" action="{% url 'mark-notification-read' notification.pk %}">{% csrf_token %}<button class="button small secondary" type="submit">Mark read</button></form>{% endif %}</div></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state"><span class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><h3>You're all caught up</h3><p>New due-date and reservation alerts will appear here.</p></div>
+  {% endif %}
+{% endblock %}
