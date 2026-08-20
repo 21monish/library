@@ -9,7 +9,6 @@ db.sqlite3
 # Environments
 .env
 .env.*
-!.env.example
 .venv/
 env/
 venv/

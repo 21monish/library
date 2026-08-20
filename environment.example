@@ -1,0 +1,41 @@
+# Shelfwise production environment for Sevalla. This is a public template:
+# enter real passwords and secrets only in the Sevalla dashboard, never here.
+# Keep the DB_* values, SECRET_KEY, DJANGO_DEBUG, TIME_ZONE, ALLOWED_HOSTS, and
+# CSRF_TRUSTED_ORIGINS available during both build and runtime. DB_URL is not
+# needed when all five DB_* component values are present.
+DB_HOST=shelfwise-4tofk-postgresql.shelfwise-4tofk.svc.cluster.local
+DB_PORT=5432
+DB_DATABASE=shelfwise
+DB_USERNAME=shelfwise_app
+DB_PASSWORD=replace-with-a-new-rotated-database-password
+DATABASE_SSL_REQUIRE=false
+SECRET_KEY=replace-with-a-new-private-random-secret
+DJANGO_DEBUG=false
+TIME_ZONE=Asia/Kolkata
+ALLOWED_HOSTS=library-f0ahg.sevalla.app
+CSRF_TRUSTED_ORIGINS=https://library-f0ahg.sevalla.app
+SECURE_SSL_REDIRECT=true
+
+# Safe default: notifications remain in application/runtime logs until a real
+# SMTP provider is configured.
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEFAULT_FROM_EMAIL=noreply@example.com
+PASSWORD_RESET_TIMEOUT=3600
+
+# Optional production SMTP settings. Uncomment only after replacing every value.
+# EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# EMAIL_HOST=smtp.example.com
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=replace-with-smtp-user
+# EMAIL_HOST_PASSWORD=replace-with-smtp-password
+# EMAIL_USE_TLS=true
+
+# Mount a Sevalla persistent disk at this path for book covers and profile photos.
+MEDIA_ROOT=/app/media
+ASSET_UPLOAD_MAX_BYTES=3145728
+
+# Circulation policy
+LOAN_LIMIT_STUDENT=3
+LOAN_LIMIT_TEACHER=10
+PENALTY_PER_DAY=10
+MAX_RENEWALS=1
