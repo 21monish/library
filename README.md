@@ -58,8 +58,8 @@ Install the daily Windows task:
 ```
 
 See [AUTOMATION.md](AUTOMATION.md), [OPERATIONS.md](OPERATIONS.md),
-[SUPABASE_SETUP.md](SUPABASE_SETUP.md), and [DEPLOYMENT.md](DEPLOYMENT.md) for
-complete operational and deployment guidance.
+[SUPABASE_SETUP.md](SUPABASE_SETUP.md), [SEVALLA_DEPLOYMENT.md](SEVALLA_DEPLOYMENT.md),
+and [DEPLOYMENT.md](DEPLOYMENT.md) for complete operational and deployment guidance.
 
 ## Security
 

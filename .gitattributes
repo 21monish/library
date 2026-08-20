@@ -5,6 +5,8 @@
 *.css text eol=lf
 *.js text eol=lf
 *.md text eol=lf
+*.toml text eol=lf
+runtime.txt text eol=lf
 *.ps1 text eol=crlf
 *.cmd text eol=crlf
 *.png binary
