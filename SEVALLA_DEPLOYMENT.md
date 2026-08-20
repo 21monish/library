@@ -51,8 +51,8 @@ Under **Applications > library-f0ahg > Environment variables**, add:
 | --- | --- | --- |
 | `DJANGO_DEBUG` | `false` | Build and runtime |
 | `SECRET_KEY` | A new random value of at least 50 characters | Build and runtime |
-| `ALLOWED_HOSTS` | `.sevalla.app` initially | Build and runtime |
-| `CSRF_TRUSTED_ORIGINS` | `https://*.sevalla.app` initially | Build and runtime |
+| `ALLOWED_HOSTS` | `library-f0ahg.sevalla.app` | Build and runtime |
+| `CSRF_TRUSTED_ORIGINS` | `https://library-f0ahg.sevalla.app` | Build and runtime |
 | `TIME_ZONE` | `Asia/Kolkata` | Build and runtime |
 | `SECURE_SSL_REDIRECT` | `true` | Runtime |
 | `DATABASE_SSL_REQUIRE` | `false` for the private internal connection | Build and runtime |
@@ -98,12 +98,14 @@ delay, 30-second interval, 5-second timeout, and failure threshold of 3. Click
 **Deploy now** and verify that the log completes `collectstatic`, migrations,
 and Gunicorn startup.
 
-After Sevalla assigns the application domain, replace the wildcard environment
-values with the exact host and redeploy:
+The known Sevalla hostname is also compiled as a safe first-deployment fallback,
+so `collectstatic` can run before the dashboard host variables are available.
+Keep the exact environment values above for runtime clarity. For a future custom
+domain, add its host and HTTPS origin and redeploy:
 
 ```text
-ALLOWED_HOSTS=actual-hostname.sevalla.app
-CSRF_TRUSTED_ORIGINS=https://actual-hostname.sevalla.app
+ALLOWED_HOSTS=your-custom-domain.example
+CSRF_TRUSTED_ORIGINS=https://your-custom-domain.example
 ```
 
 ## 7. Initialize the production account

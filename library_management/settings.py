@@ -43,17 +43,23 @@ def env_first(*names):
 DEBUG = env_bool('DJANGO_DEBUG', True)
 INSECURE_DEVELOPMENT_SECRET = 'django-insecure-local-development-only-change-before-deployment'
 SECRET_KEY = os.environ.get('SECRET_KEY', INSECURE_DEVELOPMENT_SECRET)
+SEVALLA_PUBLIC_HOST = os.environ.get(
+    'SEVALLA_PUBLIC_HOST',
+    'library-f0ahg.sevalla.app',
+).strip()
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS')
-render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '').strip()
-if render_hostname:
-    ALLOWED_HOSTS.append(render_hostname)
 if DEBUG:
     ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost', 'testserver'])
+elif SEVALLA_PUBLIC_HOST:
+    # Keep collectstatic and first deployment independent of dashboard host
+    # timing while still allowing only this application's known Sevalla domain.
+    ALLOWED_HOSTS.append(SEVALLA_PUBLIC_HOST)
 ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
 
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
-if render_hostname:
-    CSRF_TRUSTED_ORIGINS.append(f'https://{render_hostname}')
+if not DEBUG and SEVALLA_PUBLIC_HOST:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{SEVALLA_PUBLIC_HOST}')
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
 # Sevalla terminates TLS at its proxy and forwards the original protocol.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
