@@ -10,14 +10,32 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+
+from library_management.settings import normalize_database_host
 
 from .management.commands.seed_demo import DEMO_BOOKS
 from .models import Author, Book, BookInstance, Genre, Loan, Notification, Penalty, Reservation, ScanAudit
 from .notifications import deliver_pending_notifications, generate_library_notifications
 from .circulation import checkout_copy
 from .permissions import LIBRARY_GROUP_NAME
+
+
+class DeploymentSettingsTests(SimpleTestCase):
+    def test_sevalla_database_placeholder_uses_configured_internal_host(self):
+        internal_host = 'database.namespace.svc.cluster.local'
+        self.assertEqual(
+            normalize_database_host('internal-database-host', internal_host),
+            internal_host,
+        )
+
+    def test_real_database_host_is_not_changed(self):
+        database_host = 'postgres.example.internal'
+        self.assertEqual(
+            normalize_database_host(database_host, 'unused-fallback'),
+            database_host,
+        )
 
 
 class CatalogTestCase(TestCase):

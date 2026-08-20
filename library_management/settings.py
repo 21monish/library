@@ -40,6 +40,14 @@ def env_first(*names):
     return ''
 
 
+def normalize_database_host(value, sevalla_fallback):
+    """Replace the dashboard's documented placeholder with a resolvable host."""
+    value = value.strip()
+    if value.casefold() == 'internal-database-host':
+        return sevalla_fallback.strip()
+    return value
+
+
 DEBUG = env_bool('DJANGO_DEBUG', True)
 INSECURE_DEVELOPMENT_SECRET = 'django-insecure-local-development-only-change-before-deployment'
 SECRET_KEY = os.environ.get('SECRET_KEY', INSECURE_DEVELOPMENT_SECRET)
@@ -125,8 +133,15 @@ WSGI_APPLICATION = 'library_management.wsgi.application'
 # tools and external PostgreSQL connections. Local development uses SQLite when
 # neither form is configured.
 DATABASE_SSL_REQUIRE = env_bool('DATABASE_SSL_REQUIRE', False)
+SEVALLA_INTERNAL_DATABASE_HOST = os.environ.get(
+    'SEVALLA_INTERNAL_DATABASE_HOST',
+    'shelfwise-4tofk-postgresql.shelfwise-4tofk.svc.cluster.local',
+).strip()
 DATABASE_COMPONENTS = {
-    'HOST': env_first('DATABASE_HOST', 'DB_HOST').strip(),
+    'HOST': normalize_database_host(
+        env_first('DATABASE_HOST', 'DB_HOST'),
+        SEVALLA_INTERNAL_DATABASE_HOST,
+    ),
     'PORT': env_first('DATABASE_PORT', 'DB_PORT').strip(),
     'NAME': env_first('DATABASE_NAME', 'DB_DATABASE').strip(),
     'USER': env_first('DATABASE_USER', 'DB_USERNAME').strip(),

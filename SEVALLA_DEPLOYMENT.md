@@ -43,6 +43,11 @@ is optional and is ignored when all five safer component values are present.
 This means a password containing `@` does not need URL encoding. Do not manually
 copy internal credentials and do not enable public database access.
 
+Do not use the literal placeholder `internal-database-host`. The application
+currently normalizes that stale value to Shelfwise's known private Sevalla host
+so an old deployment can recover, but the Connected services value remains the
+source of truth and should replace it in the dashboard.
+
 ## 3. Add application environment variables
 
 Under **Applications > library-f0ahg > Environment variables**, add:
