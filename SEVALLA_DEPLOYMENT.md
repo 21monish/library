@@ -27,19 +27,21 @@ the database is ready before deploying the application.
 
 Open **Applications > library-f0ahg > Networking > Connected services**, click
 **Add internal connection**, and choose the new PostgreSQL database. Select
-**Add environment variables to the application** and rename the generated keys
-to:
+**Add environment variables to the application**. Shelfwise accepts Sevalla's
+generated variable names directly:
 
 | Sevalla connection value | Application variable |
 | --- | --- |
-| Host | `DATABASE_HOST` |
-| Port | `DATABASE_PORT` |
-| Database name | `DATABASE_NAME` |
-| User | `DATABASE_USER` |
-| Password | `DATABASE_PASSWORD` |
+| Host | `DB_HOST` |
+| Port | `DB_PORT` |
+| Database name | `DB_DATABASE` |
+| User | `DB_USERNAME` |
+| Password | `DB_PASSWORD` |
 
-Make all five variables available during both **Build** and **Runtime**. Do not
-manually copy internal credentials and do not enable public database access.
+Make all five variables available during both **Build** and **Runtime**. `DB_URL`
+is optional and is ignored when all five safer component values are present.
+This means a password containing `@` does not need URL encoding. Do not manually
+copy internal credentials and do not enable public database access.
 
 ## 3. Add application environment variables
 
@@ -152,4 +154,4 @@ than CSV files created inside the cron container.
 `DATABASE_URL` remains supported for local maintenance tools or a temporary
 external PostgreSQL connection. When using an external SSL connection, also set
 `DATABASE_SSL_REQUIRE=true`. The normal Sevalla deployment should use the five
-private `DATABASE_*` variables instead.
+private `DB_*` component variables instead.

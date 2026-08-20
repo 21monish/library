@@ -31,6 +31,15 @@ def env_list(name):
     return [value.strip() for value in os.environ.get(name, '').split(',') if value.strip()]
 
 
+def env_first(*names):
+    """Return the first non-empty environment value from a list of aliases."""
+    for name in names:
+        value = os.environ.get(name)
+        if value not in (None, ''):
+            return value
+    return ''
+
+
 DEBUG = env_bool('DJANGO_DEBUG', True)
 INSECURE_DEVELOPMENT_SECRET = 'django-insecure-local-development-only-change-before-deployment'
 SECRET_KEY = os.environ.get('SECRET_KEY', INSECURE_DEVELOPMENT_SECRET)
@@ -109,16 +118,21 @@ WSGI_APPLICATION = 'library_management.wsgi.application'
 # database connection is attached. DATABASE_URL remains supported for local
 # tools and external PostgreSQL connections. Local development uses SQLite when
 # neither form is configured.
-DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 DATABASE_SSL_REQUIRE = env_bool('DATABASE_SSL_REQUIRE', False)
 DATABASE_COMPONENTS = {
-    'HOST': os.environ.get('DATABASE_HOST', '').strip(),
-    'PORT': os.environ.get('DATABASE_PORT', '').strip(),
-    'NAME': os.environ.get('DATABASE_NAME', '').strip(),
-    'USER': os.environ.get('DATABASE_USER', '').strip(),
-    'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
+    'HOST': env_first('DATABASE_HOST', 'DB_HOST').strip(),
+    'PORT': env_first('DATABASE_PORT', 'DB_PORT').strip(),
+    'NAME': env_first('DATABASE_NAME', 'DB_DATABASE').strip(),
+    'USER': env_first('DATABASE_USER', 'DB_USERNAME').strip(),
+    'PASSWORD': env_first('DATABASE_PASSWORD', 'DB_PASSWORD'),
 }
 HAS_DATABASE_COMPONENTS = all(DATABASE_COMPONENTS.values())
+# Prefer components over Sevalla's DB_URL because components safely preserve
+# special characters in passwords without URL encoding. An explicitly supplied
+# DATABASE_URL still takes priority for local/external maintenance workflows.
+DATABASE_URL = env_first('DATABASE_URL').strip()
+if not DATABASE_URL and not HAS_DATABASE_COMPONENTS:
+    DATABASE_URL = env_first('DB_URL').strip()
 
 if DATABASE_URL:
     DATABASES = {
@@ -155,8 +169,8 @@ if not DEBUG:
         missing_production_settings.append('ALLOWED_HOSTS')
     if not DATABASE_URL and not HAS_DATABASE_COMPONENTS:
         missing_production_settings.append(
-            'DATABASE_URL or all DATABASE_HOST/DATABASE_PORT/DATABASE_NAME/'
-            'DATABASE_USER/DATABASE_PASSWORD values'
+            'DATABASE_URL/DB_URL or all DB_HOST/DB_PORT/DB_DATABASE/'
+            'DB_USERNAME/DB_PASSWORD values'
         )
     if missing_production_settings:
         raise ImproperlyConfigured(

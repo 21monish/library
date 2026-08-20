@@ -61,13 +61,24 @@ if (Test-Path -LiteralPath $environmentFile) {
 if (-not $DatabaseUrl -and $env:DATABASE_URL) {
     $DatabaseUrl = $env:DATABASE_URL
 }
-$hasComponentDatabase = (
+$hasStandardDatabaseComponents = (
     $env:DATABASE_HOST -and
     $env:DATABASE_PORT -and
     $env:DATABASE_NAME -and
     $env:DATABASE_USER -and
     $env:DATABASE_PASSWORD
 )
+$hasSevallaDatabaseComponents = (
+    $env:DB_HOST -and
+    $env:DB_PORT -and
+    $env:DB_DATABASE -and
+    $env:DB_USERNAME -and
+    $env:DB_PASSWORD
+)
+$hasComponentDatabase = $hasStandardDatabaseComponents -or $hasSevallaDatabaseComponents
+if (-not $DatabaseUrl -and -not $hasComponentDatabase -and $env:DB_URL) {
+    $DatabaseUrl = $env:DB_URL
+}
 
 if ($DatabaseUrl) {
     $env:DATABASE_URL = $DatabaseUrl
