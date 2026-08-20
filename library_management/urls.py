@@ -4,11 +4,11 @@ URL configuration for library_management project.
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
 """
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
-from django.conf.urls.static import static
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
+from django.views.static import serve
 
 
 def health_check(request):
@@ -36,12 +36,22 @@ def legacy_service_worker(request):
     response['Service-Worker-Allowed'] = '/'
     return response
 
+
+def media_file(request, path):
+    """Serve public uploaded images from the configured persistent media root."""
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
 urlpatterns = [
     path('health/', health_check, name='health-check'),
     path('sw.js', legacy_service_worker, name='legacy-service-worker'),
     path('', include('catalog.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
+    # Uploaded covers and profile photos live on Sevalla persistent storage.
+    # django.views.static.serve performs safe path resolution and conditional
+    # responses; it is suitable here because uploads are small public images.
+    re_path(
+        rf'^{settings.MEDIA_URL.lstrip("/")}(?P<path>.*)$',
+        media_file,
+        name='media-file',
+    ),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

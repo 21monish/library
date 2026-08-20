@@ -26,7 +26,8 @@ Validate a restore without changing the database, then import it:
 .\.venv\Scripts\python.exe manage.py import_library_data backups\2026-08-12
 ```
 
-For a full disaster-recovery backup, also keep Supabase scheduled backups enabled and test restoring them periodically.
+For full disaster recovery, keep Sevalla's automatic database and persistent
+disk backups enabled and test the database restore process periodically.
 
 ## Scheduled maintenance
 
@@ -41,10 +42,13 @@ See `AUTOMATION.md` for options, logs, manual runs, and removal.
 
 ## Production checklist
 
-- Rotate every database/service key that has ever been pasted into chat or committed.
-- Keep `.env` out of source control; use only the rotated server-side key.
+- Rotate every database password that has ever been pasted into chat or committed.
+- Keep `.env` and all production credentials out of source control.
 - Run `manage.py check --deploy`, `manage.py migrate`, and `manage.py collectstatic --noinput` before deployment.
-- Restrict Supabase database access, enforce SSL, and retain RLS/revokes on tables exposed through PostgREST.
+- Attach the Sevalla PostgreSQL database through a private internal connection
+  and keep external database access disabled unless it is temporarily needed.
+- Mount `/app/media` as persistent storage and verify an uploaded image after
+  every infrastructure change.
 - Test CSV exports and a database restore at least monthly.
 # Local startup
 

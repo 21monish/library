@@ -12,11 +12,11 @@ default Django admin interface.
 - Configurable View, Add, Change, and Delete permissions for library accounts
 - Student 15-day and teacher 30-day borrowing policies
 - Staff-only issue, renewal, return, and penalty-resolution workflows
-- Book covers and profile-image uploads with optional Supabase Storage
+- Book covers and profile-image uploads on Django/Sevalla persistent storage
 - Bootstrap interface and responsive DataTables
 - CSV/XLSX/PDF reports, QR cards and labels, audit history, and backups
 - Daily Windows automation for alerts, backups, and monthly PDF reports
-- SQLite for local development and Supabase PostgreSQL support for deployment
+- SQLite for local development and Sevalla PostgreSQL for deployment
 
 ## Local setup
 
@@ -57,12 +57,12 @@ Install the daily Windows task:
 .\install_automation.ps1 -DailyAt 08:00 -SkipEmail -RunNow
 ```
 
-See [AUTOMATION.md](AUTOMATION.md), [OPERATIONS.md](OPERATIONS.md),
-[SUPABASE_SETUP.md](SUPABASE_SETUP.md), [SEVALLA_DEPLOYMENT.md](SEVALLA_DEPLOYMENT.md),
-and [DEPLOYMENT.md](DEPLOYMENT.md) for complete operational and deployment guidance.
+See [AUTOMATION.md](AUTOMATION.md), [OPERATIONS.md](OPERATIONS.md), and
+[SEVALLA_DEPLOYMENT.md](SEVALLA_DEPLOYMENT.md) for complete operational and
+deployment guidance.
 
 ## Security
 
-Keep `.env`, database files, service-role keys, passwords, generated backups,
-reports, and runtime logs out of source control. Rotate any credential that has
+Keep `.env`, database files, passwords, generated backups, reports, uploaded
+media, and runtime logs out of source control. Rotate any credential that has
 been shared outside a protected secret manager before deployment.

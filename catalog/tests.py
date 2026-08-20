@@ -1,4 +1,5 @@
 import datetime
+import base64
 import shutil
 from io import StringIO
 from pathlib import Path
@@ -8,6 +9,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.management import call_command
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -212,6 +214,39 @@ class CatalogTestCase(TestCase):
             'cover_url': self.book.cover_url,
         })
         self.assertRedirects(response, self.book.get_absolute_url())
+
+    def test_uploaded_cover_uses_django_media_storage_and_is_served(self):
+        png_bytes = base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+            'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+        )
+        upload = SimpleUploadedFile('cover.png', png_bytes, content_type='image/png')
+        self.client.force_login(self.admin_user)
+
+        media_root = settings.BASE_DIR / '.test-media'
+        shutil.rmtree(media_root, ignore_errors=True)
+        media_root.mkdir(exist_ok=True)
+        try:
+            with self.settings(MEDIA_ROOT=media_root):
+                response = self.client.post(reverse('book-create'), {
+                    'title': 'Parable of the Sower',
+                    'author': self.author.pk,
+                    'summary': 'A test catalog record with a stored cover.',
+                    'isbn': '9780446675505',
+                    'genre': [self.genre.pk],
+                    'cover_url': '',
+                    'asset_upload': upload,
+                })
+                book = Book.objects.get(isbn='9780446675505')
+
+                self.assertRedirects(response, book.get_absolute_url())
+                self.assertTrue(book.cover_url.startswith('/media/book-covers/'))
+                self.assertTrue((media_root / book.cover_url.removeprefix('/media/')).is_file())
+                media_response = self.client.get(book.cover_url)
+                self.assertEqual(media_response.status_code, 200)
+                self.assertEqual(b''.join(media_response.streaming_content), png_bytes)
+        finally:
+            shutil.rmtree(media_root, ignore_errors=True)
 
     def test_borrow_requires_authentication_and_post(self):
         url = reverse('borrow-copy', args=[self.copy.pk])

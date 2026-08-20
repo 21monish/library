@@ -61,10 +61,20 @@ if (Test-Path -LiteralPath $environmentFile) {
 if (-not $DatabaseUrl -and $env:DATABASE_URL) {
     $DatabaseUrl = $env:DATABASE_URL
 }
+$hasComponentDatabase = (
+    $env:DATABASE_HOST -and
+    $env:DATABASE_PORT -and
+    $env:DATABASE_NAME -and
+    $env:DATABASE_USER -and
+    $env:DATABASE_PASSWORD
+)
 
 if ($DatabaseUrl) {
     $env:DATABASE_URL = $DatabaseUrl
-    Write-Host 'Database       Supabase PostgreSQL' -ForegroundColor Green
+    Write-Host 'Database       Configured PostgreSQL' -ForegroundColor Green
+} elseif ($hasComponentDatabase) {
+    Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    Write-Host 'Database       Configured PostgreSQL' -ForegroundColor Green
 } else {
     Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
     Write-Host 'Database       Local SQLite' -ForegroundColor Yellow

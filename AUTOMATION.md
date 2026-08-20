@@ -29,10 +29,10 @@ Run one complete automation cycle during startup:
 .\start.ps1 -SkipInstall -RunAutomation
 ```
 
-Supabase with repeatable demo data:
+Configured PostgreSQL with repeatable demo data:
 
 ```powershell
-$env:DATABASE_URL='YOUR_SUPABASE_SESSION_POOLER_URI'
+$env:DATABASE_URL='YOUR_POSTGRESQL_URI'
 .\start.ps1 -SeedDemo
 ```
 
@@ -78,7 +78,9 @@ The cross-platform Django equivalent is:
 The command reports active overdue loans, their estimated fines, unpaid persistent
 penalties, and the total outstanding amount. It also generates idempotent due-date,
 overdue, reservation, and administrator notifications and delivers pending email.
-Set `DATABASE_URL` first when the report should run against Supabase.
+Set `DATABASE_URL` first when a local report command should run against a remote
+PostgreSQL database. Sevalla processes receive their database variables from the
+attached internal connection automatically.
 
 To run only the notification workflow manually:
 

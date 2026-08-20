@@ -46,7 +46,7 @@ CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 if render_hostname:
     CSRF_TRUSTED_ORIGINS.append(f'https://{render_hostname}')
 
-# Render terminates TLS at its proxy and forwards the original protocol.
+# Sevalla terminates TLS at its proxy and forwards the original protocol.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
 SESSION_COOKIE_SECURE = not DEBUG
@@ -105,17 +105,47 @@ WSGI_APPLICATION = 'library_management.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Set DATABASE_URL to the Supabase PostgreSQL connection string in production.
-# Local development continues to use SQLite when the variable is absent.
+# Sevalla can inject individual PostgreSQL connection values when an internal
+# database connection is attached. DATABASE_URL remains supported for local
+# tools and external PostgreSQL connections. Local development uses SQLite when
+# neither form is configured.
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=bool(DATABASE_URL),
-    )
+DATABASE_SSL_REQUIRE = env_bool('DATABASE_SSL_REQUIRE', False)
+DATABASE_COMPONENTS = {
+    'HOST': os.environ.get('DATABASE_HOST', '').strip(),
+    'PORT': os.environ.get('DATABASE_PORT', '').strip(),
+    'NAME': os.environ.get('DATABASE_NAME', '').strip(),
+    'USER': os.environ.get('DATABASE_USER', '').strip(),
+    'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
 }
+HAS_DATABASE_COMPONENTS = all(DATABASE_COMPONENTS.values())
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=DATABASE_SSL_REQUIRE,
+        )
+    }
+elif HAS_DATABASE_COMPONENTS:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            **DATABASE_COMPONENTS,
+            'CONN_MAX_AGE': 600,
+            'CONN_HEALTH_CHECKS': True,
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 
 if not DEBUG:
     missing_production_settings = []
@@ -123,8 +153,11 @@ if not DEBUG:
         missing_production_settings.append('SECRET_KEY')
     if not ALLOWED_HOSTS:
         missing_production_settings.append('ALLOWED_HOSTS')
-    if not DATABASE_URL:
-        missing_production_settings.append('DATABASE_URL')
+    if not DATABASE_URL and not HAS_DATABASE_COMPONENTS:
+        missing_production_settings.append(
+            'DATABASE_URL or all DATABASE_HOST/DATABASE_PORT/DATABASE_NAME/'
+            'DATABASE_USER/DATABASE_PASSWORD values'
+        )
     if missing_production_settings:
         raise ImproperlyConfigured(
             'Production mode requires secure values for: '
@@ -169,7 +202,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -203,11 +236,9 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Shelfwise Library <noreply@shelfwise.local>')
 
-# Public book covers and profile photos. Uploads use a server-only service key;
-# never expose this value to templates or browser JavaScript.
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
-SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET', 'library-assets')
+# Public book covers and profile photos are stored under MEDIA_ROOT. On Sevalla,
+# mount persistent application storage at /app/media and set MEDIA_ROOT to that
+# same path so uploads survive restarts and deployments.
 ASSET_UPLOAD_MAX_BYTES = int(os.environ.get('ASSET_UPLOAD_MAX_BYTES', str(3 * 1024 * 1024)))
 
 # Circulation rules are environment-configurable so policy changes do not

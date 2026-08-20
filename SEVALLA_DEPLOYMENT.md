@@ -1,103 +1,155 @@
-# Deploy Shelfwise on Sevalla
+# Deploy Shelfwise completely on Sevalla
 
-Shelfwise includes `nixpacks.toml` and `runtime.txt` for Sevalla Application
-Hosting. The container installs `requirements.txt`, collects production static
-assets, applies database migrations, and starts Gunicorn on Sevalla's `$PORT`.
+Shelfwise uses three Sevalla resources:
 
-## 1. Application source and build
+1. **Application Hosting** runs Django and Gunicorn from `21monish/library`.
+2. **PostgreSQL Database Hosting** stores all application records and users.
+3. **Application persistent storage** stores uploaded book covers and profile
+   photos at `/app/media`.
 
-In the `library-f0ahg` application, use:
+No external database or file-storage provider is required.
 
-- Repository: `21monish/library`
-- Branch: `main`
-- Build environment: Nixpacks
-- Build path: `.`
-- Automatic deployment: enabled for `main`
+## 1. Create the PostgreSQL database
 
-The committed Nixpacks configuration supplies the build and start commands. If
-you enter a custom web start command in Sevalla, use exactly:
+In Sevalla, open **Databases > Create database** and use:
 
-```bash
-python manage.py migrate --noinput && gunicorn library_management.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -
+- Type: PostgreSQL 17
+- Database name: `shelfwise`
+- Database user: `shelfwise_app`
+- Project: the same project as the application
+- Location: exactly the same data center as the application
+- Resource: the smallest suitable database size to begin with
+
+Keep the generated password in Sevalla. Extensions are not required. Wait until
+the database is ready before deploying the application.
+
+## 2. Attach the private database connection
+
+Open **Applications > library-f0ahg > Networking > Connected services**, click
+**Add internal connection**, and choose the new PostgreSQL database. Select
+**Add environment variables to the application** and rename the generated keys
+to:
+
+| Sevalla connection value | Application variable |
+| --- | --- |
+| Host | `DATABASE_HOST` |
+| Port | `DATABASE_PORT` |
+| Database name | `DATABASE_NAME` |
+| User | `DATABASE_USER` |
+| Password | `DATABASE_PASSWORD` |
+
+Make all five variables available during both **Build** and **Runtime**. Do not
+manually copy internal credentials and do not enable public database access.
+
+## 3. Add application environment variables
+
+Under **Applications > library-f0ahg > Environment variables**, add:
+
+| Key | Value | Availability |
+| --- | --- | --- |
+| `DJANGO_DEBUG` | `false` | Build and runtime |
+| `SECRET_KEY` | A new random value of at least 50 characters | Build and runtime |
+| `ALLOWED_HOSTS` | `.sevalla.app` initially | Build and runtime |
+| `CSRF_TRUSTED_ORIGINS` | `https://*.sevalla.app` initially | Build and runtime |
+| `TIME_ZONE` | `Asia/Kolkata` | Build and runtime |
+| `SECURE_SSL_REDIRECT` | `true` | Runtime |
+| `DATABASE_SSL_REQUIRE` | `false` for the private internal connection | Build and runtime |
+| `MEDIA_ROOT` | `/app/media` | Runtime |
+| `ASSET_UPLOAD_MAX_BYTES` | `3145728` | Runtime |
+
+Generate `SECRET_KEY` locally without saving it to the repository:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(64))"
 ```
 
-## 2. Required environment variables
+## 4. Add persistent media storage
 
-Add these under **Environment variables**. Mark the first six variables as both
-build-time and runtime variables because Django loads them while collecting
-static assets. Do not commit their real values.
+Open **Applications > library-f0ahg > Disks**, click **Create disk**, and use:
 
-| Key | Value |
-| --- | --- |
-| `DJANGO_DEBUG` | `false` |
-| `SECRET_KEY` | A new long random production secret |
-| `DATABASE_URL` | Rotated Supabase session-pooler PostgreSQL URI |
-| `ALLOWED_HOSTS` | `.sevalla.app` for initial deployment; use the exact host afterward |
-| `CSRF_TRUSTED_ORIGINS` | `https://*.sevalla.app` initially; use the exact HTTPS origin afterward |
-| `TIME_ZONE` | `Asia/Kolkata` |
-| `SECURE_SSL_REDIRECT` | `true` |
-| `SUPABASE_URL` | The Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | A newly rotated server-side service key |
-| `SUPABASE_STORAGE_BUCKET` | `library-assets` |
+- Process: the web process
+- Path: `/app/media`
+- Size: 10 GB initially
 
-The Supabase password and service-role credentials previously shared outside a
-secret manager must be rotated before use. If the database password contains
-special characters, percent-encode it inside `DATABASE_URL`.
+The disk is required. Without it, user-uploaded images are erased when the
+application restarts or redeploys. A process with persistent storage must run as
+one instance, so leave horizontal scaling disabled and scale the web pod
+vertically if more capacity is needed.
 
-Sevalla applies commas and double quotes specially in environment variables.
-The initial values above avoid commas; do not surround values with quotes.
+## 5. Configure the build and web process
 
-## 3. Web process and health checks
-
-The web process must expose the port supplied by `$PORT`. Configure both probes:
-
-- Readiness path: `/health/`
-- Liveness path: `/health/`
-- Port: the web process port
-- Initial delay: 20 seconds
-- Period: 30 seconds
-- Timeout: 5 seconds
-- Failure threshold: 3
-
-After the first successful deployment, open **Domains**, copy the assigned
-`sevalla.app` hostname, and replace the wildcard `ALLOWED_HOSTS` and
-`CSRF_TRUSTED_ORIGINS` values with that exact hostname and HTTPS origin.
-
-## 4. Daily automation cron job
-
-Under **Processes**, create a Cron job:
-
-- Name: `shelfwise-daily-automation`
-- Start command: `python manage.py run_library_automation --skip-backup --skip-monthly-report`
-- Schedule: `0 8 * * *`
-- Custom time zone: `Asia/Kolkata`
-
-Sevalla cron containers have no persistent storage, so CSV backups and generated
-PDF files are skipped there. Keep Supabase scheduled backups enabled. If SMTP is
-not configured, append `--skip-email` so notifications remain pending rather
-than being treated as delivered by a console backend.
-
-## 5. Optional SMTP variables
-
-For real email reminders, add:
+Use the GitHub repository `21monish/library`, branch `main`, build path `.`, and
+Nixpacks. Enable automatic deployment for `main`. The committed
+`nixpacks.toml` runs:
 
 ```text
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=your SMTP host
-EMAIL_PORT=587
-EMAIL_HOST_USER=your SMTP username
-EMAIL_HOST_PASSWORD=your SMTP password
-EMAIL_USE_TLS=true
-DEFAULT_FROM_EMAIL=your verified sender address
+Build: python manage.py collectstatic --noinput
+Start: python manage.py migrate --noinput && gunicorn library_management.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -
 ```
 
-## 6. Deployment verification
+Do not define or hard-code `PORT`; Sevalla supplies it.
 
-Deploy `main`, then confirm:
+## 6. Configure health checks and deploy
 
-1. The build log completes `collectstatic`.
-2. The runtime log completes all migrations and starts Gunicorn.
-3. `/health/` returns `{"status":"ok"}`.
-4. Login, catalog, member permissions, issue/return, penalties, and reports load.
-5. In the Web terminal, activate Nixpacks Python with `. /opt/venv/bin/activate`
-   before running `python manage.py check --deploy` or other Django commands.
+Configure readiness and liveness checks on `/health/` with a 20-second initial
+delay, 30-second interval, 5-second timeout, and failure threshold of 3. Click
+**Deploy now** and verify that the log completes `collectstatic`, migrations,
+and Gunicorn startup.
+
+After Sevalla assigns the application domain, replace the wildcard environment
+values with the exact host and redeploy:
+
+```text
+ALLOWED_HOSTS=actual-hostname.sevalla.app
+CSRF_TRUSTED_ORIGINS=https://actual-hostname.sevalla.app
+```
+
+## 7. Initialize the production account
+
+Open the application Web Terminal and run:
+
+```bash
+. /opt/venv/bin/activate
+python manage.py check --deploy
+python manage.py showmigrations
+python manage.py createsuperuser --username superadmin --email admin@example.com
+```
+
+Choose a strong unique production password when prompted. The local SQLite
+database and its users are not uploaded to Sevalla.
+
+## 8. Add daily automation
+
+Under **Processes**, create a cron process:
+
+- Name: `shelfwise-daily-automation`
+- Schedule: `0 8 * * *`
+- Time zone: `Asia/Kolkata`
+- Command:
+
+```bash
+python manage.py run_library_automation --skip-backup --skip-monthly-report --skip-email
+```
+
+Remove `--skip-email` after SMTP variables are configured. Sevalla cron storage
+is ephemeral, so database recovery should use Sevalla's database backups rather
+than CSV files created inside the cron container.
+
+## 9. Verify the complete deployment
+
+1. Open `/health/` and confirm `{"status":"ok"}`.
+2. Sign in as the production superadmin.
+3. Create one student, teacher, and library account.
+4. Add a book and upload a cover.
+5. Redeploy, then confirm the uploaded cover is still displayed.
+6. Issue books and verify 15-day student and 30-day teacher due dates.
+7. Return an overdue loan and verify its penalty.
+8. Confirm the database appears under the application's connected services.
+9. Keep external PostgreSQL networking disabled.
+
+## Optional: external DATABASE_URL
+
+`DATABASE_URL` remains supported for local maintenance tools or a temporary
+external PostgreSQL connection. When using an external SSL connection, also set
+`DATABASE_SSL_REQUIRE=true`. The normal Sevalla deployment should use the five
+private `DATABASE_*` variables instead.
