@@ -5,14 +5,6 @@ from django.conf import settings
 from django.db import migrations, models
 
 
-def protect_postgrest_table(apps, schema_editor):
-    """Keep this internal Django table inaccessible through PostgREST."""
-    if schema_editor.connection.vendor == 'postgresql':
-        with schema_editor.connection.cursor() as cursor:
-            cursor.execute('ALTER TABLE public.catalog_penaltytransaction ENABLE ROW LEVEL SECURITY')
-            cursor.execute('REVOKE ALL ON TABLE public.catalog_penaltytransaction FROM anon, authenticated')
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -38,5 +30,4 @@ class Migration(migrations.Migration):
                 'ordering': ('-created_at',),
             },
         ),
-        migrations.RunPython(protect_postgrest_table, migrations.RunPython.noop),
     ]
